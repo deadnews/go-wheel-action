@@ -1,10 +1,14 @@
 # Changelog
 
-## [1.0.0-alpha.0](https://github.com/deadnews/coverage-badge-action/commits/v1.0.0-alpha.0) - 2026-03-26
+## [1.0.0-alpha.1](https://github.com/deadnews/coverage-badge-action/commits/v1.0.0-alpha.1) - 2026-03-26
 
 ### Features
 
 - init - ([fee1916](https://github.com/deadnews/coverage-badge-action/commit/fee1916ed5e7303ce920d080d88843eaec336779))
+
+### Bug fixes
+
+- normalize semver version to `pep 440` - ([08726e2](https://github.com/deadnews/coverage-badge-action/commit/08726e281df4ad04bfac9e43c92ce8e803132c16))
 
 ### Chores
 
