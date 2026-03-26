@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.0-alpha.1](https://github.com/deadnews/coverage-badge-action/commits/v1.0.0-alpha.1) - 2026-03-26
+## [1.0.0-alpha.2](https://github.com/deadnews/coverage-badge-action/commits/v1.0.0-alpha.2) - 2026-03-26
 
 ### Features
 
@@ -12,6 +12,7 @@
 
 ### Chores
 
+- _(github)_ enable verbose for pypa publish action - ([4d40421](https://github.com/deadnews/coverage-badge-action/commit/4d40421cfebac52a5daa249df5a07f465e8713a1))
 - _(github)_ remove codeql and deps workflows - ([943d276](https://github.com/deadnews/coverage-badge-action/commit/943d276e53e3c51263d1a38bfb280cb57cf08968))
 - postinit - ([64ebc50](https://github.com/deadnews/coverage-badge-action/commit/64ebc506e47de3929e6236ee59fef6f3bccacd2c))
 
