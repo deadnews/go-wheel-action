@@ -1,6 +1,6 @@
 # go-wheel-action
 
-> GitHub Action that packages Go binaries as Python wheels for PyPI distribution
+> Package Go binaries as Python wheels
 
 [![PyPI: Version](https://img.shields.io/pypi/v/go-wheel-action?logo=pypi&logoColor=white)](https://pypi.org/project/go-wheel-action)
 [![GitHub: Release](https://img.shields.io/github/v/release/deadnews/go-wheel-action?logo=github&logoColor=white)](https://github.com/deadnews/go-wheel-action/releases/latest)

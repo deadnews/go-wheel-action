@@ -1,4 +1,4 @@
-// Build Python wheels from a Go module.
+// Package Go binaries as Python wheels.
 package main
 
 import (
