@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"maps"
 	"os"
 	"os/exec"
@@ -202,19 +203,27 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 	}
 	defer f.Close()
 
+	// CreateRaw avoids ZIP data descriptors that PyPI rejects.
 	w := zip.NewWriter(f)
 	for _, path := range slices.Sorted(maps.Keys(files)) {
-		header := &zip.FileHeader{Name: path, Method: zip.Deflate}
+		data := files[path]
+		header := &zip.FileHeader{
+			Name:               path,
+			Method:             zip.Store,
+			CRC32:              crc32.ChecksumIEEE(data),
+			CompressedSize64:   uint64(len(data)),
+			UncompressedSize64: uint64(len(data)),
+		}
 		if strings.Contains(path, "/bin/") {
 			header.SetMode(0o755)
 		}
 
-		wr, err := w.CreateHeader(header)
+		wr, err := w.CreateRaw(header)
 		if err != nil {
 			return "", fmt.Errorf("writing wheel entry %s: %w", path, err)
 		}
 
-		if _, err := wr.Write(files[path]); err != nil {
+		if _, err := wr.Write(data); err != nil {
 			return "", fmt.Errorf("writing wheel entry %s: %w", path, err)
 		}
 	}
