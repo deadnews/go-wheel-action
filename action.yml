@@ -1,0 +1,52 @@
+name: go-wheel-action
+description: Build Python wheels from a Go module
+
+inputs:
+  mod-dir:
+    description: Directory containing go.mod
+    default: .
+  package:
+    description: Go package to build
+    default: .
+  version:
+    description: Package version
+  name:
+    description: Python package name and CLI command
+  ldflags:
+    description: Go linker flags
+    default: -s
+  output-dir:
+    description: Directory for built wheels
+    default: ./dist
+  readme:
+    description: Path to README for PyPI
+    default: README.md
+  url:
+    description: Project URL for PyPI
+  description:
+    description: Package summary for PyPI
+  license:
+    description: License identifier for PyPI
+
+runs:
+  using: composite
+  steps:
+    - name: Build wheels
+      shell: bash
+      run: |
+        go build -C "${{ github.action_path }}" \
+          -o "${RUNNER_TEMP}/go-wheel-action" \
+          ./cmd/go-wheel-action
+
+        "${RUNNER_TEMP}/go-wheel-action"
+      env:
+        GOWHEEL_MOD_DIR: ${{ inputs.mod-dir }}
+        GOWHEEL_PACKAGE: ${{ inputs.package }}
+        GOWHEEL_VERSION: ${{ inputs.version || github.ref_name }}
+        GOWHEEL_NAME: ${{ inputs.name }}
+        GOWHEEL_LDFLAGS: ${{ inputs.ldflags }}
+        GOWHEEL_OUTPUT_DIR: ${{ inputs.output-dir }}
+        GOWHEEL_README: ${{ inputs.readme }}
+        GOWHEEL_URL: ${{ inputs.url || format('{0}/{1}', github.server_url, github.repository) }}
+        GOWHEEL_DESCRIPTION: ${{ inputs.description || github.event.repository.description }}
+        GOWHEEL_LICENSE: ${{ inputs.license || github.event.repository.license.spdx_id }}
