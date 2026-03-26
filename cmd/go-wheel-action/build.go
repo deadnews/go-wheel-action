@@ -2,6 +2,8 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
+	"compress/flate"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -73,15 +75,15 @@ func normalizeName(name string) string {
 
 func buildMetadata(cfg *config) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Metadata-Version: 2.1\nName: %s\nVersion: %s\n", cfg.rawName, cfg.version)
+	fmt.Fprintf(&b, "Metadata-Version: 2.4\nName: %s\nVersion: %s\n", cfg.rawName, cfg.version)
 	if cfg.description != "" {
 		fmt.Fprintf(&b, "Summary: %s\n", cfg.description)
 	}
 	if cfg.url != "" {
-		fmt.Fprintf(&b, "Home-page: %s\n", cfg.url)
+		fmt.Fprintf(&b, "Project-URL: Repository, %s\n", cfg.url)
 	}
 	if cfg.license != "" {
-		fmt.Fprintf(&b, "License: %s\n", cfg.license)
+		fmt.Fprintf(&b, "License-Expression: %s\n", cfg.license)
 	}
 	fmt.Fprint(&b, "Requires-Python: >=3.10\n")
 
@@ -207,11 +209,12 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 	w := zip.NewWriter(f)
 	for _, path := range slices.Sorted(maps.Keys(files)) {
 		data := files[path]
+		compressed := deflate(data)
 		header := &zip.FileHeader{
 			Name:               path,
-			Method:             zip.Store,
+			Method:             zip.Deflate,
 			CRC32:              crc32.ChecksumIEEE(data),
-			CompressedSize64:   uint64(len(data)),
+			CompressedSize64:   uint64(len(compressed)),
 			UncompressedSize64: uint64(len(data)),
 		}
 		if strings.Contains(path, "/bin/") {
@@ -223,7 +226,7 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 			return "", fmt.Errorf("writing wheel entry %s: %w", path, err)
 		}
 
-		if _, err := wr.Write(data); err != nil {
+		if _, err := wr.Write(compressed); err != nil {
 			return "", fmt.Errorf("writing wheel entry %s: %w", path, err)
 		}
 	}
@@ -237,6 +240,14 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 	}
 
 	return whlName, nil
+}
+
+func deflate(data []byte) []byte {
+	var b bytes.Buffer
+	w, _ := flate.NewWriter(&b, flate.DefaultCompression)
+	w.Write(data) //nolint:errcheck,gosec // writes to bytes.Buffer cannot fail
+	w.Close()     //nolint:errcheck,gosec // writes to bytes.Buffer cannot fail
+	return b.Bytes()
 }
 
 func sha256Base64(data []byte) string {

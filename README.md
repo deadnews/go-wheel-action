@@ -5,7 +5,7 @@
 [![PyPI: Version](https://img.shields.io/pypi/v/go-wheel-action?logo=pypi&logoColor=white)](https://pypi.org/project/go-wheel-action)
 [![GitHub: Release](https://img.shields.io/github/v/release/deadnews/go-wheel-action?logo=github&logoColor=white)](https://github.com/deadnews/go-wheel-action/releases/latest)
 [![CI: Main](https://img.shields.io/github/actions/workflow/status/deadnews/go-wheel-action/main.yml?branch=main&logo=github&logoColor=white&label=main)](https://github.com/deadnews/go-wheel-action/actions/workflows/main.yml)
-[![CI: Coverage](https://img.shields.io/codecov/c/github/deadnews/go-wheel-action?token=OCZDZIYPMC&logo=codecov&logoColor=white)](https://codecov.io/gh/deadnews/go-wheel-action)
+[![CI: Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/deadnews/go-wheel-action/refs/heads/badges/coverage.json)](https://github.com/deadnews/go-wheel-action)
 
 **[Usage](#usage)** • **[Inputs](#inputs)** • **[CLI](#cli)** • **[Platforms](#platforms)**
 
