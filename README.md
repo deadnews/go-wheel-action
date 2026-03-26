@@ -27,7 +27,7 @@
 
 ## Inputs
 
-On a tag push, all inputs are optional — version, URL, description, and license are auto-populated from the GitHub context.
+On a tag push, all inputs are optional — defaults are derived from the GitHub context.
 
 | Input         | Default                | Description                                          |
 | ------------- | ---------------------- | ---------------------------------------------------- |
