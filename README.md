@@ -1,11 +1,11 @@
 # go-wheel-action
 
-> GitHub Action that packages Go binaries as Python wheels for PyPI distribution
+> Package Go binaries as Python wheels
 
-[![GitHub: Release](https://img.shields.io/github/v/release/deadnews/go-wheel-action?logo=github&logoColor=white)](https://github.com/deadnews/go-wheel-action/releases/latest)
 [![PyPI: Version](https://img.shields.io/pypi/v/go-wheel-action?logo=pypi&logoColor=white)](https://pypi.org/project/go-wheel-action)
+[![GitHub: Release](https://img.shields.io/github/v/release/deadnews/go-wheel-action?logo=github&logoColor=white)](https://github.com/deadnews/go-wheel-action/releases/latest)
 [![CI: Main](https://img.shields.io/github/actions/workflow/status/deadnews/go-wheel-action/main.yml?branch=main&logo=github&logoColor=white&label=main)](https://github.com/deadnews/go-wheel-action/actions/workflows/main.yml)
-[![CI: Coverage](https://img.shields.io/codecov/c/github/deadnews/go-wheel-action?token=OCZDZIYPMC&logo=codecov&logoColor=white)](https://codecov.io/gh/deadnews/go-wheel-action)
+[![CI: Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/deadnews/go-wheel-action/refs/heads/badges/coverage.json)](https://github.com/deadnews/go-wheel-action)
 
 **[Usage](#usage)** • **[Inputs](#inputs)** • **[CLI](#cli)** • **[Platforms](#platforms)**
 
@@ -27,13 +27,13 @@
 
 ## Inputs
 
-On a tag push, all inputs are optional — version, URL, description, and license are auto-populated from the GitHub context.
+On a tag push, all inputs are optional — defaults are derived from the GitHub context.
 
 | Input         | Default                | Description                                          |
 | ------------- | ---------------------- | ---------------------------------------------------- |
 | `mod-dir`     | `.`                    | Directory containing `go.mod`                        |
 | `package`     | `.`                    | Go package to build (passed to `go build [package]`) |
-| `version`     | `github.ref_name`      | Package version (`v` prefix is stripped)             |
+| `version`     | `github.ref_name`      | Package version                                      |
 | `name`        | basename of `mod-dir`  | Python package name and CLI command                  |
 | `ldflags`     | `-s`                   | Go linker flags                                      |
 | `output-dir`  | `./dist`               | Directory for built wheels                           |

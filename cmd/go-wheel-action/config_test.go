@@ -5,6 +5,33 @@ import (
 	"testing"
 )
 
+func TestNormalizeVersion(t *testing.T) {
+	tests := []struct {
+		input, want string
+	}{
+		{"1.0.0", "1.0.0"},
+		{"v1.0.0", "1.0.0"},
+		{"v1.0.0-alpha.0", "1.0.0a0"},
+		{"1.0.0-alpha.0", "1.0.0a0"},
+		{"1.0.0-alpha.1", "1.0.0a1"},
+		{"1.0.0-alpha", "1.0.0a0"},
+		{"1.0.0-beta.0", "1.0.0b0"},
+		{"1.0.0-beta.2", "1.0.0b2"},
+		{"1.0.0-rc.0", "1.0.0rc0"},
+		{"1.0.0-rc.1", "1.0.0rc1"},
+		{"1.0.0-dev.3", "1.0.0.dev3"},
+		{"1.0.0a1", "1.0.0a1"},
+		{"1.0.0b2", "1.0.0b2"},
+		{"1.0.0rc1", "1.0.0rc1"},
+		{"1.0.0.dev0", "1.0.0.dev0"},
+	}
+	for _, tt := range tests {
+		if got := normalizeVersion(tt.input); got != tt.want {
+			t.Errorf("normalizeVersion(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
 func TestLoadConfig(t *testing.T) {
 	t.Run("version required", func(t *testing.T) {
 		t.Setenv("GOWHEEL_VERSION", "")
@@ -14,25 +41,14 @@ func TestLoadConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("strips v prefix", func(t *testing.T) {
-		t.Setenv("GOWHEEL_VERSION", "v1.2.3")
+	t.Run("normalizes version", func(t *testing.T) {
+		t.Setenv("GOWHEEL_VERSION", "v1.0.0-alpha.0")
 		cfg, err := loadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.version != "1.2.3" {
-			t.Errorf("version = %q, want %q", cfg.version, "1.2.3")
-		}
-	})
-
-	t.Run("version without prefix", func(t *testing.T) {
-		t.Setenv("GOWHEEL_VERSION", "1.0.0")
-		cfg, err := loadConfig()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if cfg.version != "1.0.0" {
-			t.Errorf("version = %q, want %q", cfg.version, "1.0.0")
+		if cfg.version != "1.0.0a0" {
+			t.Errorf("version = %q, want %q", cfg.version, "1.0.0a0")
 		}
 	})
 

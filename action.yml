@@ -1,5 +1,5 @@
 name: go-wheel-action
-description: Build Python wheels from a Go module
+description: Package Go binaries as Python wheels
 
 inputs:
   mod-dir:

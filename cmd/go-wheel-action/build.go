@@ -2,11 +2,14 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
+	"compress/flate"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"maps"
 	"os"
 	"os/exec"
@@ -72,15 +75,15 @@ func normalizeName(name string) string {
 
 func buildMetadata(cfg *config) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Metadata-Version: 2.1\nName: %s\nVersion: %s\n", cfg.rawName, cfg.version)
+	fmt.Fprintf(&b, "Metadata-Version: 2.4\nName: %s\nVersion: %s\n", cfg.rawName, cfg.version)
 	if cfg.description != "" {
 		fmt.Fprintf(&b, "Summary: %s\n", cfg.description)
 	}
 	if cfg.url != "" {
-		fmt.Fprintf(&b, "Home-page: %s\n", cfg.url)
+		fmt.Fprintf(&b, "Project-URL: Repository, %s\n", cfg.url)
 	}
 	if cfg.license != "" {
-		fmt.Fprintf(&b, "License: %s\n", cfg.license)
+		fmt.Fprintf(&b, "License-Expression: %s\n", cfg.license)
 	}
 	fmt.Fprint(&b, "Requires-Python: >=3.10\n")
 
@@ -113,6 +116,7 @@ func buildAllWheels(cfg *config) ([]string, error) {
 	defer os.RemoveAll(tmpDir)
 
 	normName := normalizeName(cfg.rawName)
+	distInfo := fmt.Sprintf("%s-%s.dist-info", normName, cfg.version)
 	metadata := buildMetadata(cfg)
 
 	type buildKey struct{ goos, goarch string }
@@ -153,7 +157,6 @@ func buildAllWheels(cfg *config) ([]string, error) {
 		}
 
 		binName := cfg.rawName + p.ext()
-		distInfo := fmt.Sprintf("%s-%s.dist-info", normName, cfg.version)
 
 		files := map[string][]byte{
 			normName + "/__init__.py":    fmt.Appendf(nil, shimInit, binName),
@@ -202,19 +205,28 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 	}
 	defer f.Close()
 
+	// CreateRaw avoids ZIP data descriptors that PyPI rejects.
 	w := zip.NewWriter(f)
 	for _, path := range slices.Sorted(maps.Keys(files)) {
-		header := &zip.FileHeader{Name: path, Method: zip.Deflate}
+		data := files[path]
+		compressed := deflate(data)
+		header := &zip.FileHeader{
+			Name:               path,
+			Method:             zip.Deflate,
+			CRC32:              crc32.ChecksumIEEE(data),
+			CompressedSize64:   uint64(len(compressed)),
+			UncompressedSize64: uint64(len(data)),
+		}
 		if strings.Contains(path, "/bin/") {
 			header.SetMode(0o755)
 		}
 
-		wr, err := w.CreateHeader(header)
+		wr, err := w.CreateRaw(header)
 		if err != nil {
 			return "", fmt.Errorf("writing wheel entry %s: %w", path, err)
 		}
 
-		if _, err := wr.Write(files[path]); err != nil {
+		if _, err := wr.Write(compressed); err != nil {
 			return "", fmt.Errorf("writing wheel entry %s: %w", path, err)
 		}
 	}
@@ -228,6 +240,14 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 	}
 
 	return whlName, nil
+}
+
+func deflate(data []byte) []byte {
+	var b bytes.Buffer
+	w, _ := flate.NewWriter(&b, flate.DefaultCompression)
+	w.Write(data) //nolint:errcheck,gosec // writes to bytes.Buffer cannot fail
+	w.Close()     //nolint:errcheck,gosec // writes to bytes.Buffer cannot fail
+	return b.Bytes()
 }
 
 func sha256Base64(data []byte) string {

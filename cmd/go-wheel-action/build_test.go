@@ -57,7 +57,7 @@ func TestSha256Base64(t *testing.T) {
 func TestBuildMetadata(t *testing.T) {
 	t.Run("minimal", func(t *testing.T) {
 		got := buildMetadata(&config{rawName: "myapp", version: "1.0.0", readmePath: "nonexistent.md"})
-		want := "Metadata-Version: 2.1\nName: myapp\nVersion: 1.0.0\nRequires-Python: >=3.10\n"
+		want := "Metadata-Version: 2.4\nName: myapp\nVersion: 1.0.0\nRequires-Python: >=3.10\n"
 		if got != want {
 			t.Errorf("buildMetadata minimal:\ngot:  %q\nwant: %q", got, want)
 		}
@@ -76,8 +76,8 @@ func TestBuildMetadata(t *testing.T) {
 			"Name: myapp",
 			"Version: 2.0.0",
 			"Summary: A tool",
-			"Home-page: https://example.com",
-			"License: MIT",
+			"Project-URL: Repository, https://example.com",
+			"License-Expression: MIT",
 			"Requires-Python: >=3.10",
 		} {
 			if !strings.Contains(got, s) {
@@ -167,6 +167,25 @@ func TestBuildAllWheels(t *testing.T) {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("wheel file missing: %s", path)
 		}
+	}
+}
+
+func TestBuildAllWheelsBadPackage(t *testing.T) {
+	modDir := setupTinyModule(t)
+	outputDir := t.TempDir()
+
+	cfg := &config{
+		modDir:    modDir,
+		outputDir: outputDir,
+		pkg:       "./nonexistent",
+		ldflags:   "-s",
+		rawName:   "tiny",
+		version:   "0.1.0",
+	}
+
+	_, err := buildAllWheels(cfg)
+	if err == nil {
+		t.Fatal("expected error for bad package")
 	}
 }
 
