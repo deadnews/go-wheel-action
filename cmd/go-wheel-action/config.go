@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -23,7 +24,7 @@ type config struct {
 }
 
 func loadConfig() (*config, error) {
-	version := strings.TrimPrefix(os.Getenv("GOWHEEL_VERSION"), "v")
+	version := normalizeVersion(os.Getenv("GOWHEEL_VERSION"))
 	if version == "" {
 		return nil, errors.New("version input is required")
 	}
@@ -45,4 +46,27 @@ func loadConfig() (*config, error) {
 		license:     os.Getenv("GOWHEEL_LICENSE"),
 		readmePath:  cmp.Or(os.Getenv("GOWHEEL_README"), "README.md"),
 	}, nil
+}
+
+var preReleaseRe = regexp.MustCompile(`^(\d+(?:\.\d+)*)-(alpha|beta|rc|dev)(?:\.(\d+))?$`)
+
+var pep440Tags = map[string]string{
+	"alpha": "a",
+	"beta":  "b",
+	"rc":    "rc",
+	"dev":   ".dev",
+}
+
+// normalizeVersion converts a semver version string to PEP 440.
+func normalizeVersion(v string) string {
+	v = strings.TrimPrefix(v, "v")
+	m := preReleaseRe.FindStringSubmatch(v)
+	if m == nil {
+		return v
+	}
+	num := m[3]
+	if num == "" {
+		num = "0"
+	}
+	return m[1] + pep440Tags[m[2]] + num
 }

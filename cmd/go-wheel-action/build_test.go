@@ -170,6 +170,25 @@ func TestBuildAllWheels(t *testing.T) {
 	}
 }
 
+func TestBuildAllWheelsBadPackage(t *testing.T) {
+	modDir := setupTinyModule(t)
+	outputDir := t.TempDir()
+
+	cfg := &config{
+		modDir:    modDir,
+		outputDir: outputDir,
+		pkg:       "./nonexistent",
+		ldflags:   "-s",
+		rawName:   "tiny",
+		version:   "0.1.0",
+	}
+
+	_, err := buildAllWheels(cfg)
+	if err == nil {
+		t.Fatal("expected error for bad package")
+	}
+}
+
 func TestBuildWheelBadOutputDir(t *testing.T) {
 	files := map[string][]byte{"pkg/__init__.py": []byte("init")}
 	_, err := buildWheel(files, "pkg", "1.0", "manylinux_2_17_x86_64", "/nonexistent/dir")

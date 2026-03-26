@@ -2,8 +2,8 @@
 
 > GitHub Action that packages Go binaries as Python wheels for PyPI distribution
 
-[![GitHub: Release](https://img.shields.io/github/v/release/deadnews/go-wheel-action?logo=github&logoColor=white)](https://github.com/deadnews/go-wheel-action/releases/latest)
 [![PyPI: Version](https://img.shields.io/pypi/v/go-wheel-action?logo=pypi&logoColor=white)](https://pypi.org/project/go-wheel-action)
+[![GitHub: Release](https://img.shields.io/github/v/release/deadnews/go-wheel-action?logo=github&logoColor=white)](https://github.com/deadnews/go-wheel-action/releases/latest)
 [![CI: Main](https://img.shields.io/github/actions/workflow/status/deadnews/go-wheel-action/main.yml?branch=main&logo=github&logoColor=white&label=main)](https://github.com/deadnews/go-wheel-action/actions/workflows/main.yml)
 [![CI: Coverage](https://img.shields.io/codecov/c/github/deadnews/go-wheel-action?token=OCZDZIYPMC&logo=codecov&logoColor=white)](https://codecov.io/gh/deadnews/go-wheel-action)
 
@@ -33,7 +33,7 @@ On a tag push, all inputs are optional — defaults are derived from the GitHub 
 | ------------- | ---------------------- | ---------------------------------------------------- |
 | `mod-dir`     | `.`                    | Directory containing `go.mod`                        |
 | `package`     | `.`                    | Go package to build (passed to `go build [package]`) |
-| `version`     | `github.ref_name`      | Package version (`v` prefix is stripped)             |
+| `version`     | `github.ref_name`      | Package version                                      |
 | `name`        | basename of `mod-dir`  | Python package name and CLI command                  |
 | `ldflags`     | `-s`                   | Go linker flags                                      |
 | `output-dir`  | `./dist`               | Directory for built wheels                           |

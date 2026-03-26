@@ -113,6 +113,7 @@ func buildAllWheels(cfg *config) ([]string, error) {
 	defer os.RemoveAll(tmpDir)
 
 	normName := normalizeName(cfg.rawName)
+	distInfo := fmt.Sprintf("%s-%s.dist-info", normName, cfg.version)
 	metadata := buildMetadata(cfg)
 
 	type buildKey struct{ goos, goarch string }
@@ -153,7 +154,6 @@ func buildAllWheels(cfg *config) ([]string, error) {
 		}
 
 		binName := cfg.rawName + p.ext()
-		distInfo := fmt.Sprintf("%s-%s.dist-info", normName, cfg.version)
 
 		files := map[string][]byte{
 			normName + "/__init__.py":    fmt.Appendf(nil, shimInit, binName),
