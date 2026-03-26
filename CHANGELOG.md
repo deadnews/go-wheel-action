@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.0-alpha.3](https://github.com/deadnews/coverage-badge-action/commits/v1.0.0-alpha.3) - 2026-03-26
+## [1.0.0-alpha.4](https://github.com/deadnews/coverage-badge-action/commits/v1.0.0-alpha.4) - 2026-03-26
 
 ### Features
 
@@ -8,6 +8,7 @@
 
 ### Bug fixes
 
+- use deflate - ([6ea8eb9](https://github.com/deadnews/coverage-badge-action/commit/6ea8eb925a4f00f9b7bad8b800b143b855e1e1fa))
 - avoid zip data descriptors - ([7e5fb82](https://github.com/deadnews/coverage-badge-action/commit/7e5fb82f04ad887a9b90895eb9a6562f297881e7))
 - normalize semver version to `pep 440` - ([08726e2](https://github.com/deadnews/coverage-badge-action/commit/08726e281df4ad04bfac9e43c92ce8e803132c16))
 
