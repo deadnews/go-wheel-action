@@ -9,6 +9,7 @@ func TestNormalizeVersion(t *testing.T) {
 	tests := []struct {
 		input, want string
 	}{
+		{"1.0", "1.0"},
 		{"1.0.0", "1.0.0"},
 		{"v1.0.0", "1.0.0"},
 		{"v1.0.0-alpha.0", "1.0.0a0"},
@@ -24,6 +25,9 @@ func TestNormalizeVersion(t *testing.T) {
 		{"1.0.0b2", "1.0.0b2"},
 		{"1.0.0rc1", "1.0.0rc1"},
 		{"1.0.0.dev0", "1.0.0.dev0"},
+		{"1.0.post1", "1.0.post1"},
+		{"1.0.dev1", "1.0.dev1"},
+		{"2013.10", "2013.10"},
 	}
 	for _, tt := range tests {
 		if got := normalizeVersion(tt.input); got != tt.want {
@@ -38,6 +42,17 @@ func TestLoadConfig(t *testing.T) {
 		_, err := loadConfig()
 		if err == nil {
 			t.Fatal("expected error for empty version")
+		}
+	})
+
+	t.Run("invalid name", func(t *testing.T) {
+		t.Setenv("GOWHEEL_VERSION", "1.0.0")
+		for _, n := range []string{"foo/bar", "foo bar", "/leading", "trailing/"} {
+			t.Setenv("GOWHEEL_NAME", n)
+			_, err := loadConfig()
+			if err == nil {
+				t.Errorf("expected error for name %q", n)
+			}
 		}
 	})
 
