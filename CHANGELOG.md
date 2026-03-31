@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1](https://github.com/deadnews/go-wheel-action/compare/v1.0.0...v1.0.1) - 2026-03-31
+
+### Bug fixes
+
+- _(config)_ validate package name ([#3](https://github.com/deadnews/go-wheel-action/issues/3)) - ([af976e0](https://github.com/deadnews/go-wheel-action/commit/af976e0a24e9e7ee9194fdd09f12071d320e5e91))
+
 ## [1.0.0](https://github.com/deadnews/go-wheel-action/commits/v1.0.0) - 2026-03-26
 
 ### Features
