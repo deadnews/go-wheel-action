@@ -15,7 +15,7 @@ up:
 	go mod verify
 up-ci:
 	prek auto-update --freeze
-	pinact run -update
+	pinact run --update
 
 build:
 	go build -ldflags=-s -o ./dist/ ./...

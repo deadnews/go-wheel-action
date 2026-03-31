@@ -34,12 +34,17 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf("resolving mod-dir: %w", err)
 	}
 
+	rawName := cmp.Or(os.Getenv("GOWHEEL_NAME"), filepath.Base(absModDir))
+	if !nameRe.MatchString(rawName) {
+		return nil, fmt.Errorf("name %q contains invalid characters", rawName)
+	}
+
 	return &config{
 		modDir:      absModDir,
 		outputDir:   cmp.Or(os.Getenv("GOWHEEL_OUTPUT_DIR"), "./dist"),
 		pkg:         cmp.Or(os.Getenv("GOWHEEL_PACKAGE"), "."),
 		ldflags:     cmp.Or(os.Getenv("GOWHEEL_LDFLAGS"), "-s"),
-		rawName:     cmp.Or(os.Getenv("GOWHEEL_NAME"), filepath.Base(absModDir)),
+		rawName:     rawName,
 		version:     version,
 		description: os.Getenv("GOWHEEL_DESCRIPTION"),
 		url:         os.Getenv("GOWHEEL_URL"),
@@ -48,7 +53,10 @@ func loadConfig() (*config, error) {
 	}, nil
 }
 
-var preReleaseRe = regexp.MustCompile(`^(\d+(?:\.\d+)*)-(alpha|beta|rc|dev)(?:\.(\d+))?$`)
+var (
+	preReleaseRe = regexp.MustCompile(`^(\d+(?:\.\d+)*)-(alpha|beta|rc|dev)(?:\.(\d+))?$`)
+	nameRe       = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`)
+)
 
 var pep440Tags = map[string]string{
 	"alpha": "a",

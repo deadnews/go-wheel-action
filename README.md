@@ -4,7 +4,7 @@
 
 [![PyPI: Version](https://img.shields.io/pypi/v/go-wheel-action?logo=pypi&logoColor=white)](https://pypi.org/project/go-wheel-action)
 [![GitHub: Release](https://img.shields.io/github/v/release/deadnews/go-wheel-action?logo=github&logoColor=white)](https://github.com/deadnews/go-wheel-action/releases/latest)
-[![CI: Main](https://img.shields.io/github/actions/workflow/status/deadnews/go-wheel-action/main.yml?branch=main&logo=github&logoColor=white&label=main)](https://github.com/deadnews/go-wheel-action/actions/workflows/main.yml)
+[![CI: Main](https://img.shields.io/github/actions/workflow/status/deadnews/go-wheel-action/main.yml?branch=main&logo=github&logoColor=white&label=main)](https://github.com/deadnews/go-wheel-action)
 [![CI: Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/deadnews/go-wheel-action/refs/heads/badges/coverage.json)](https://github.com/deadnews/go-wheel-action)
 
 **[Usage](#usage)** • **[Inputs](#inputs)** • **[CLI](#cli)** • **[Platforms](#platforms)**
@@ -21,7 +21,7 @@
   with:
     package: ./cmd/myapp
 
-- name: Publish package to PyPI
+- name: Publish to PyPI
   uses: pypa/gh-action-pypi-publish@v1
 ```
 
@@ -51,7 +51,7 @@ GOWHEEL_VERSION=0.0.1 \
 GOWHEEL_PACKAGE=./cmd/myapp \
 go run github.com/deadnews/go-wheel-action/cmd/go-wheel-action@latest
 
-# or, since the tool publishes itself as a wheel:
+# or, since the tool publishes itself on PyPI:
 GOWHEEL_VERSION=0.0.1 \
 GOWHEEL_PACKAGE=./cmd/myapp \
 uvx go-wheel-action

@@ -108,7 +108,7 @@ func setupTinyModule(t *testing.T) string {
 
 	dir := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module tiny\ngo 1.26\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module tiny\ngo 1.25\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

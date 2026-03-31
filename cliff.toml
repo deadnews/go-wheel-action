@@ -40,7 +40,7 @@ commit_parsers = [
 
 [changelog]
 postprocessors = [
-  { pattern = '<REPO>', replace = "https://github.com/deadnews/coverage-badge-action" },
+  { pattern = '<REPO>', replace = "https://github.com/deadnews/go-wheel-action" },
 ]
 header = """
 # Changelog\n
