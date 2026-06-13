@@ -7,6 +7,7 @@ linters:
     - asciicheck
     - bidichk
     - bodyclose
+    - containedctx
     - copyloopvar
     - dogsled
     - dupl
@@ -41,6 +42,7 @@ linters:
     - nakedret
     - nestif
     - nilerr
+    - nilnesserr
     - nilnil
     - noctx
     - nolintlint
@@ -48,6 +50,7 @@ linters:
     - prealloc
     - predeclared
     - promlinter
+    - reassign
     - recvcheck
     - revive
     - rowserrcheck
@@ -55,6 +58,7 @@ linters:
     - sqlclosecheck
     - staticcheck
     - testifylint
+    - thelper
     - tparallel
     - unconvert
     - unparam
@@ -65,18 +69,19 @@ linters:
     - whitespace
     - wrapcheck
   settings:
-    gosec:
-      excludes:
-        - G303
-        - G304
-        - G701
-        - G703
-        - G704
-        - G706
+    goconst:
+      ignore-tests: true
+      min-occurrences: 5
     gocritic:
       enable-all: true
-      disabled-checks:
-        - paramTypeCombine
+    gosec:
+      excludes:
+        - G304 # Potential file inclusion via variable
+        - G701 # SQL injection via taint analysis
+        - G703 # Path traversal via taint analysis
+        - G704 # SSRF via taint analysis
+        - G706 # Log injection via taint analysis
+        - G710 # Open redirect via taint analysis
   exclusions:
     rules:
       - source: "^\\s*defer\\s+"
@@ -86,7 +91,6 @@ linters:
         linters:
           - errchkjson
           - gocognit
-          - goconst
           - godoclint
           - gosec
 

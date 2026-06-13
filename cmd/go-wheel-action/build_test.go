@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -119,23 +118,25 @@ func setupTinyModule(t *testing.T) string {
 	return dir
 }
 
-func TestCompileGo(t *testing.T) {
+func TestCompile(t *testing.T) {
 	modDir := setupTinyModule(t)
-	output := filepath.Join(t.TempDir(), "out")
+	binPath := filepath.Join(t.TempDir(), "out")
+	p := platform{goos: runtime.GOOS, goarch: runtime.GOARCH}
 
 	t.Run("success", func(t *testing.T) {
-		err := compileGo(context.Background(), modDir, output, runtime.GOOS, runtime.GOARCH, ".", "-s")
+		cfg := &config{modDir: modDir, pkg: ".", ldflags: "-s", rawName: "tiny"}
+		data, err := cfg.compile(p, binPath)
 		if err != nil {
-			t.Fatalf("compileGo: %v", err)
+			t.Fatalf("compile: %v", err)
 		}
-		if _, err := os.Stat(output); err != nil {
-			t.Fatalf("output binary missing: %v", err)
+		if len(data) == 0 {
+			t.Fatal("expected binary data")
 		}
 	})
 
 	t.Run("bad package", func(t *testing.T) {
-		err := compileGo(context.Background(), modDir, output, runtime.GOOS, runtime.GOARCH, "./nonexistent", "-s")
-		if err == nil {
+		cfg := &config{modDir: modDir, pkg: "./nonexistent", ldflags: "-s", rawName: "tiny"}
+		if _, err := cfg.compile(p, binPath); err == nil {
 			t.Fatal("expected error for bad package")
 		}
 	})
