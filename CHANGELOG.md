@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.2](https://github.com/deadnews/go-wheel-action/compare/v1.0.1...v1.0.2) - 2026-06-16
+
+### Bug fixes
+
+- fail fast on build errors ([#4](https://github.com/deadnews/go-wheel-action/issues/4)) - ([f1dc0c4](https://github.com/deadnews/go-wheel-action/commit/f1dc0c4179ef42b088529600ff4edd31c113d5c1))
+
 ## [1.0.1](https://github.com/deadnews/go-wheel-action/compare/v1.0.0...v1.0.1) - 2026-03-31
 
 ### Bug fixes
