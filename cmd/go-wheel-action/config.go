@@ -54,7 +54,7 @@ func loadConfig() (*config, error) {
 }
 
 var (
-	preReleaseRe = regexp.MustCompile(`^(\d+(?:\.\d+)*)-(alpha|beta|rc|dev)(?:\.(\d+))?$`)
+	preReleaseRe = regexp.MustCompile(`^(\d+(?:\.\d+)*)-(alpha|beta|rc|dev)(?:\.?(\d+))?$`)
 	nameRe       = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$`)
 )
 

@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"maps"
@@ -66,11 +65,11 @@ def main():
 
 const shimMain = "from . import main; main()\n"
 
-var specialRunRe = regexp.MustCompile(`[-._]+`)
+var nameSepRe = regexp.MustCompile(`[-._]+`)
 
 // normalizeName applies PEP 625 normalization.
 func normalizeName(name string) string {
-	return strings.ToLower(specialRunRe.ReplaceAllString(name, "_"))
+	return strings.ToLower(nameSepRe.ReplaceAllString(name, "_"))
 }
 
 func buildMetadata(cfg *config) string {
@@ -87,25 +86,37 @@ func buildMetadata(cfg *config) string {
 	}
 	fmt.Fprint(&b, "Requires-Python: >=3.10\n")
 
-	if data, err := os.ReadFile(cfg.readmePath); err == nil {
-		fmt.Fprintf(&b, "Description-Content-Type: text/markdown\n\n%s\n", string(data))
+	data, err := os.ReadFile(cfg.readmePath)
+	switch {
+	case err == nil:
+		fmt.Fprintf(&b, "Description-Content-Type: text/markdown\n\n%s\n", data)
+	case !os.IsNotExist(err):
+		fmt.Fprintf(os.Stderr, "warning: reading readme %s: %v\n", cfg.readmePath, err)
 	}
 
 	return b.String()
 }
 
-func compileGo(ctx context.Context, modDir, output, goos, goarch, pkg, ldflags string) error {
-	cmd := exec.CommandContext(ctx, "go", "build", "-ldflags="+ldflags, "-o", output, pkg) //nolint:gosec // intentionally runs go build with user-provided flags
-	cmd.Dir = modDir
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS="+goos, "GOARCH="+goarch)
+// compile cross-compiles cfg.pkg and returns the binary bytes.
+func (cfg *config) compile(p platform, binPath string) ([]byte, error) {
+	fmt.Printf("Building %s/%s...\n", p.goos, p.goarch)
+
+	cmd := exec.CommandContext(context.Background(), "go", "build", "-ldflags="+cfg.ldflags, "-o", binPath, cfg.pkg) //nolint:gosec // intentionally runs go build with user-provided flags
+	cmd.Dir = cfg.modDir
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS="+p.goos, "GOARCH="+p.goarch)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("go build %s/%s: %w", goos, goarch, err)
+		return nil, fmt.Errorf("go build %s/%s: %w", p.goos, p.goarch, err)
 	}
 
-	return nil
+	data, err := os.ReadFile(binPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading binary: %w", err)
+	}
+
+	return data, nil
 }
 
 func buildAllWheels(cfg *config) ([]string, error) {
@@ -126,34 +137,14 @@ func buildAllWheels(cfg *config) ([]string, error) {
 	for _, p := range platforms {
 		key := buildKey{p.goos, p.goarch}
 
-		binData, cached := cache[key]
-		if !cached {
+		binData, ok := cache[key]
+		if !ok {
 			binPath := filepath.Join(tmpDir, fmt.Sprintf("%s_%s_%s%s", cfg.rawName, p.goos, p.goarch, p.ext()))
-
-			fmt.Printf("Building %s/%s...\n", p.goos, p.goarch)
-
-			if err := compileGo(context.Background(), cfg.modDir, binPath, p.goos, p.goarch, cfg.pkg, cfg.ldflags); err != nil {
-				fmt.Fprintf(os.Stderr, "  warning: %v\n", err)
-				cache[key] = nil
-
-				continue
-			}
-
-			var err error
-
-			binData, err = os.ReadFile(binPath)
+			binData, err = cfg.compile(p, binPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "  warning: %v\n", err)
-				cache[key] = nil
-
-				continue
+				return nil, err
 			}
-
 			cache[key] = binData
-		}
-
-		if binData == nil {
-			continue
 		}
 
 		binName := cfg.rawName + p.ext()
@@ -171,16 +162,11 @@ func buildAllWheels(cfg *config) ([]string, error) {
 
 		whlName, err := buildWheel(files, normName, cfg.version, p.tag, cfg.outputDir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "  warning: %v\n", err)
-			continue
+			return nil, err
 		}
 
 		built = append(built, whlName)
 		fmt.Printf("  %s\n", whlName)
-	}
-
-	if len(built) == 0 {
-		return nil, errors.New("no wheels were built")
 	}
 
 	return built, nil
@@ -190,12 +176,19 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 	distInfo := fmt.Sprintf("%s-%s.dist-info", name, version)
 	recordPath := distInfo + "/RECORD"
 
+	paths := append(slices.Collect(maps.Keys(files)), recordPath)
+	slices.Sort(paths)
+
+	// RECORD lists each file's hash and size; its own entry has an empty hash.
 	var record strings.Builder
-	for _, path := range slices.Sorted(maps.Keys(files)) {
+	for _, path := range paths {
+		if path == recordPath {
+			continue
+		}
 		fmt.Fprintf(&record, "%s,%s,%d\n", path, sha256Base64(files[path]), len(files[path]))
 	}
 	fmt.Fprintf(&record, "%s,,\n", recordPath)
-	files[recordPath] = []byte(record.String())
+	recordData := []byte(record.String())
 
 	whlName := fmt.Sprintf("%s-%s-py3-none-%s.whl", name, version, tag)
 
@@ -207,8 +200,11 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 
 	// CreateRaw avoids ZIP data descriptors that PyPI rejects.
 	w := zip.NewWriter(f)
-	for _, path := range slices.Sorted(maps.Keys(files)) {
+	for _, path := range paths {
 		data := files[path]
+		if path == recordPath {
+			data = recordData
+		}
 		compressed := deflate(data)
 		header := &zip.FileHeader{
 			Name:               path,
