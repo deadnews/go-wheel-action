@@ -39,6 +39,11 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf("name %q contains invalid characters", rawName)
 	}
 
+	license := os.Getenv("GOWHEEL_LICENSE")
+	if license == "NOASSERTION" {
+		license = ""
+	}
+
 	return &config{
 		modDir:      absModDir,
 		outputDir:   cmp.Or(os.Getenv("GOWHEEL_OUTPUT_DIR"), "./dist"),
@@ -48,7 +53,7 @@ func loadConfig() (*config, error) {
 		version:     version,
 		description: os.Getenv("GOWHEEL_DESCRIPTION"),
 		url:         os.Getenv("GOWHEEL_URL"),
-		license:     os.Getenv("GOWHEEL_LICENSE"),
+		license:     license,
 		readmePath:  cmp.Or(os.Getenv("GOWHEEL_README"), "README.md"),
 	}, nil
 }

@@ -125,7 +125,7 @@ func TestCompile(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		cfg := &config{modDir: modDir, pkg: ".", ldflags: "-s", rawName: "tiny"}
-		data, err := cfg.compile(p, binPath)
+		data, err := compile(cfg, p, binPath)
 		if err != nil {
 			t.Fatalf("compile: %v", err)
 		}
@@ -136,7 +136,7 @@ func TestCompile(t *testing.T) {
 
 	t.Run("bad package", func(t *testing.T) {
 		cfg := &config{modDir: modDir, pkg: "./nonexistent", ldflags: "-s", rawName: "tiny"}
-		if _, err := cfg.compile(p, binPath); err == nil {
+		if _, err := compile(cfg, p, binPath); err == nil {
 			t.Fatal("expected error for bad package")
 		}
 	})

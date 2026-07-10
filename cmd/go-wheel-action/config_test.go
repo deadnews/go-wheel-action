@@ -143,6 +143,19 @@ func TestLoadConfig(t *testing.T) {
 		}
 	})
 
+	t.Run("drops NOASSERTION license", func(t *testing.T) {
+		t.Setenv("GOWHEEL_VERSION", "1.0.0")
+		t.Setenv("GOWHEEL_LICENSE", "NOASSERTION")
+
+		cfg, err := loadConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.license != "" {
+			t.Errorf("license = %q, want empty", cfg.license)
+		}
+	})
+
 	t.Run("name defaults to modDir basename", func(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("GOWHEEL_VERSION", "1.0.0")

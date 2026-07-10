@@ -98,7 +98,7 @@ func buildMetadata(cfg *config) string {
 }
 
 // compile cross-compiles cfg.pkg and returns the binary bytes.
-func (cfg *config) compile(p platform, binPath string) ([]byte, error) {
+func compile(cfg *config, p platform, binPath string) ([]byte, error) {
 	fmt.Printf("Building %s/%s...\n", p.goos, p.goarch)
 
 	cmd := exec.CommandContext(context.Background(), "go", "build", "-ldflags="+cfg.ldflags, "-o", binPath, cfg.pkg) //nolint:gosec // intentionally runs go build with user-provided flags
@@ -111,7 +111,7 @@ func (cfg *config) compile(p platform, binPath string) ([]byte, error) {
 		return nil, fmt.Errorf("go build %s/%s: %w", p.goos, p.goarch, err)
 	}
 
-	data, err := os.ReadFile(binPath)
+	data, err := os.ReadFile(binPath) //nolint:gosec // G304: binPath is created in a private temp dir
 	if err != nil {
 		return nil, fmt.Errorf("reading binary: %w", err)
 	}
@@ -140,7 +140,7 @@ func buildAllWheels(cfg *config) ([]string, error) {
 		binData, ok := cache[key]
 		if !ok {
 			binPath := filepath.Join(tmpDir, fmt.Sprintf("%s_%s_%s%s", cfg.rawName, p.goos, p.goarch, p.ext()))
-			binData, err = cfg.compile(p, binPath)
+			binData, err = compile(cfg, p, binPath)
 			if err != nil {
 				return nil, err
 			}
@@ -192,7 +192,7 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 
 	whlName := fmt.Sprintf("%s-%s-py3-none-%s.whl", name, version, tag)
 
-	f, err := os.Create(filepath.Join(outputDir, whlName))
+	f, err := os.Create(filepath.Join(outputDir, whlName)) //nolint:gosec // G304: output path is user-provided by design
 	if err != nil {
 		return "", fmt.Errorf("creating wheel file: %w", err)
 	}
