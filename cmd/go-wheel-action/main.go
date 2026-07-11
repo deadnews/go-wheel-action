@@ -1,4 +1,4 @@
-// Package Go binaries as Python wheels.
+// Package main provides go-wheel-action, which packages Go binaries as Python wheels.
 package main
 
 import (
@@ -14,13 +14,13 @@ func main() {
 }
 
 func run() error {
-	cfg, err := loadConfig()
+	cfg, err := LoadConfig()
 	if err != nil {
 		return err
 	}
 
 	if err := os.MkdirAll(cfg.outputDir, 0o750); err != nil {
-		return fmt.Errorf("creating output dir: %w", err)
+		return fmt.Errorf("create output dir: %w", err)
 	}
 
 	built, err := buildAllWheels(cfg)

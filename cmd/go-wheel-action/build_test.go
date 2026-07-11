@@ -55,7 +55,7 @@ func TestSha256Base64(t *testing.T) {
 
 func TestBuildMetadata(t *testing.T) {
 	t.Run("minimal", func(t *testing.T) {
-		got := buildMetadata(&config{rawName: "myapp", version: "1.0.0", readmePath: "nonexistent.md"})
+		got := buildMetadata(&Config{rawName: "myapp", version: "1.0.0", readmePath: "nonexistent.md"})
 		want := "Metadata-Version: 2.4\nName: myapp\nVersion: 1.0.0\nRequires-Python: >=3.10\n"
 		if got != want {
 			t.Errorf("buildMetadata minimal:\ngot:  %q\nwant: %q", got, want)
@@ -63,7 +63,7 @@ func TestBuildMetadata(t *testing.T) {
 	})
 
 	t.Run("all fields", func(t *testing.T) {
-		got := buildMetadata(&config{
+		got := buildMetadata(&Config{
 			rawName:     "myapp",
 			version:     "2.0.0",
 			description: "A tool",
@@ -92,7 +92,7 @@ func TestBuildMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		got := buildMetadata(&config{rawName: "myapp", version: "1.0.0", readmePath: readme})
+		got := buildMetadata(&Config{rawName: "myapp", version: "1.0.0", readmePath: readme})
 		if !strings.Contains(got, "# Hello") {
 			t.Error("buildMetadata should include readme content")
 		}
@@ -124,7 +124,7 @@ func TestCompile(t *testing.T) {
 	p := platform{goos: runtime.GOOS, goarch: runtime.GOARCH}
 
 	t.Run("success", func(t *testing.T) {
-		cfg := &config{modDir: modDir, pkg: ".", ldflags: "-s", rawName: "tiny"}
+		cfg := &Config{modDir: modDir, pkg: ".", ldflags: "-s", rawName: "tiny"}
 		data, err := compile(cfg, p, binPath)
 		if err != nil {
 			t.Fatalf("compile: %v", err)
@@ -135,7 +135,7 @@ func TestCompile(t *testing.T) {
 	})
 
 	t.Run("bad package", func(t *testing.T) {
-		cfg := &config{modDir: modDir, pkg: "./nonexistent", ldflags: "-s", rawName: "tiny"}
+		cfg := &Config{modDir: modDir, pkg: "./nonexistent", ldflags: "-s", rawName: "tiny"}
 		if _, err := compile(cfg, p, binPath); err == nil {
 			t.Fatal("expected error for bad package")
 		}
@@ -146,7 +146,7 @@ func TestBuildAllWheels(t *testing.T) {
 	modDir := setupTinyModule(t)
 	outputDir := t.TempDir()
 
-	cfg := &config{
+	cfg := &Config{
 		modDir:    modDir,
 		outputDir: outputDir,
 		pkg:       ".",
@@ -175,7 +175,7 @@ func TestBuildAllWheelsBadPackage(t *testing.T) {
 	modDir := setupTinyModule(t)
 	outputDir := t.TempDir()
 
-	cfg := &config{
+	cfg := &Config{
 		modDir:    modDir,
 		outputDir: outputDir,
 		pkg:       "./nonexistent",

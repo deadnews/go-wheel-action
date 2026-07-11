@@ -72,7 +72,7 @@ func normalizeName(name string) string {
 	return strings.ToLower(nameSepRe.ReplaceAllString(name, "_"))
 }
 
-func buildMetadata(cfg *config) string {
+func buildMetadata(cfg *Config) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Metadata-Version: 2.4\nName: %s\nVersion: %s\n", cfg.rawName, cfg.version)
 	if cfg.description != "" {
@@ -98,7 +98,7 @@ func buildMetadata(cfg *config) string {
 }
 
 // compile cross-compiles cfg.pkg and returns the binary bytes.
-func compile(cfg *config, p platform, binPath string) ([]byte, error) {
+func compile(cfg *Config, p platform, binPath string) ([]byte, error) {
 	fmt.Printf("Building %s/%s...\n", p.goos, p.goarch)
 
 	cmd := exec.CommandContext(context.Background(), "go", "build", "-ldflags="+cfg.ldflags, "-o", binPath, cfg.pkg) //nolint:gosec // intentionally runs go build with user-provided flags
@@ -113,16 +113,16 @@ func compile(cfg *config, p platform, binPath string) ([]byte, error) {
 
 	data, err := os.ReadFile(binPath) //nolint:gosec // G304: binPath is created in a private temp dir
 	if err != nil {
-		return nil, fmt.Errorf("reading binary: %w", err)
+		return nil, fmt.Errorf("read binary: %w", err)
 	}
 
 	return data, nil
 }
 
-func buildAllWheels(cfg *config) ([]string, error) {
+func buildAllWheels(cfg *Config) ([]string, error) {
 	tmpDir, err := os.MkdirTemp("", "go-wheel-*")
 	if err != nil {
-		return nil, fmt.Errorf("creating temp dir: %w", err)
+		return nil, fmt.Errorf("create temp dir: %w", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
@@ -194,7 +194,7 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 
 	f, err := os.Create(filepath.Join(outputDir, whlName)) //nolint:gosec // G304: output path is user-provided by design
 	if err != nil {
-		return "", fmt.Errorf("creating wheel file: %w", err)
+		return "", fmt.Errorf("create wheel file: %w", err)
 	}
 	defer f.Close()
 
@@ -219,20 +219,20 @@ func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (
 
 		wr, err := w.CreateRaw(header)
 		if err != nil {
-			return "", fmt.Errorf("writing wheel entry %s: %w", path, err)
+			return "", fmt.Errorf("write wheel entry %s: %w", path, err)
 		}
 
 		if _, err := wr.Write(compressed); err != nil {
-			return "", fmt.Errorf("writing wheel entry %s: %w", path, err)
+			return "", fmt.Errorf("write wheel entry %s: %w", path, err)
 		}
 	}
 
 	if err := w.Close(); err != nil {
-		return "", fmt.Errorf("finalizing wheel: %w", err)
+		return "", fmt.Errorf("finalize wheel: %w", err)
 	}
 
 	if err := f.Close(); err != nil {
-		return "", fmt.Errorf("closing wheel file: %w", err)
+		return "", fmt.Errorf("close wheel file: %w", err)
 	}
 
 	return whlName, nil

@@ -10,7 +10,8 @@ import (
 	"strings"
 )
 
-type config struct {
+// Config holds application configuration.
+type Config struct {
 	modDir      string
 	outputDir   string
 	pkg         string
@@ -23,7 +24,8 @@ type config struct {
 	readmePath  string
 }
 
-func loadConfig() (*config, error) {
+// LoadConfig loads configuration from environment variables.
+func LoadConfig() (*Config, error) {
 	version := normalizeVersion(os.Getenv("GOWHEEL_VERSION"))
 	if version == "" {
 		return nil, errors.New("version input is required")
@@ -31,7 +33,7 @@ func loadConfig() (*config, error) {
 
 	absModDir, err := filepath.Abs(cmp.Or(os.Getenv("GOWHEEL_MOD_DIR"), "."))
 	if err != nil {
-		return nil, fmt.Errorf("resolving mod-dir: %w", err)
+		return nil, fmt.Errorf("resolve mod-dir: %w", err)
 	}
 
 	rawName := cmp.Or(os.Getenv("GOWHEEL_NAME"), filepath.Base(absModDir))
@@ -44,7 +46,7 @@ func loadConfig() (*config, error) {
 		license = ""
 	}
 
-	return &config{
+	return &Config{
 		modDir:      absModDir,
 		outputDir:   cmp.Or(os.Getenv("GOWHEEL_OUTPUT_DIR"), "./dist"),
 		pkg:         cmp.Or(os.Getenv("GOWHEEL_PACKAGE"), "."),

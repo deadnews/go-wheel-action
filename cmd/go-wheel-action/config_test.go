@@ -43,7 +43,7 @@ func TestNormalizeVersion(t *testing.T) {
 func TestLoadConfig(t *testing.T) {
 	t.Run("version required", func(t *testing.T) {
 		t.Setenv("GOWHEEL_VERSION", "")
-		_, err := loadConfig()
+		_, err := LoadConfig()
 		if err == nil {
 			t.Fatal("expected error for empty version")
 		}
@@ -53,7 +53,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Setenv("GOWHEEL_VERSION", "1.0.0")
 		for _, n := range []string{"foo/bar", "foo bar", "/leading", "trailing/"} {
 			t.Setenv("GOWHEEL_NAME", n)
-			_, err := loadConfig()
+			_, err := LoadConfig()
 			if err == nil {
 				t.Errorf("expected error for name %q", n)
 			}
@@ -62,7 +62,7 @@ func TestLoadConfig(t *testing.T) {
 
 	t.Run("normalizes version", func(t *testing.T) {
 		t.Setenv("GOWHEEL_VERSION", "v1.0.0-alpha.0")
-		cfg, err := loadConfig()
+		cfg, err := LoadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -80,7 +80,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Setenv("GOWHEEL_OUTPUT_DIR", "")
 		t.Setenv("GOWHEEL_README", "")
 
-		cfg, err := loadConfig()
+		cfg, err := LoadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -113,7 +113,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Setenv("GOWHEEL_URL", "https://example.com")
 		t.Setenv("GOWHEEL_LICENSE", "MIT")
 
-		cfg, err := loadConfig()
+		cfg, err := LoadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -147,7 +147,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Setenv("GOWHEEL_VERSION", "1.0.0")
 		t.Setenv("GOWHEEL_LICENSE", "NOASSERTION")
 
-		cfg, err := loadConfig()
+		cfg, err := LoadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -162,7 +162,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Setenv("GOWHEEL_MOD_DIR", dir)
 		t.Setenv("GOWHEEL_NAME", "")
 
-		cfg, err := loadConfig()
+		cfg, err := LoadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
