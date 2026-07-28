@@ -19,10 +19,6 @@ func run() error {
 		return err
 	}
 
-	if err := os.MkdirAll(cfg.outputDir, 0o750); err != nil {
-		return fmt.Errorf("create output dir: %w", err)
-	}
-
 	built, err := buildAllWheels(cfg)
 	if err != nil {
 		return err

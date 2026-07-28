@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -194,54 +195,48 @@ func TestBuildAllWheelsBadPackage(t *testing.T) {
 	}
 }
 
-func TestBuildWheelBadOutputDir(t *testing.T) {
-	files := map[string][]byte{"pkg/__init__.py": []byte("init")}
-	_, err := buildWheel(files, "pkg", "1.0", "manylinux_2_17_x86_64", "/nonexistent/dir")
+func TestBuildWheelBadOutputPath(t *testing.T) {
+	entries := []entry{{path: "pkg/__init__.py", data: []byte("init")}}
+	err := buildWheel(entries, "pkg-1.0.dist-info/RECORD", "/nonexistent/dir/pkg.whl")
 	if err == nil {
 		t.Fatal("expected error for nonexistent output dir")
 	}
 }
 
 func TestBuildWheel(t *testing.T) {
-	outputDir := t.TempDir()
+	outPath := filepath.Join(t.TempDir(), "pkg-1.0-py3-none-manylinux_2_17_x86_64.whl")
 
-	files := map[string][]byte{
-		"pkg/__init__.py":            []byte("init"),
-		"pkg/bin/tool":               []byte("binary"),
-		"pkg-1.0.dist-info/METADATA": []byte("meta"),
-		"pkg-1.0.dist-info/WHEEL":    []byte("wheel"),
+	entries := []entry{
+		{path: "pkg/__init__.py", data: []byte("init")},
+		{path: "pkg/bin/tool", data: []byte("binary"), exec: true},
+		{path: "pkg-1.0.dist-info/METADATA", data: []byte("meta")},
+		{path: "pkg-1.0.dist-info/WHEEL", data: []byte("wheel")},
 	}
 
-	whlName, err := buildWheel(files, "pkg", "1.0", "manylinux_2_17_x86_64", outputDir)
-	if err != nil {
+	if err := buildWheel(entries, "pkg-1.0.dist-info/RECORD", outPath); err != nil {
 		t.Fatalf("buildWheel: %v", err)
 	}
 
-	if want := "pkg-1.0-py3-none-manylinux_2_17_x86_64.whl"; whlName != want {
-		t.Errorf("wheel name = %q, want %q", whlName, want)
-	}
-
-	r, err := zip.OpenReader(filepath.Join(outputDir, whlName))
+	r, err := zip.OpenReader(outPath)
 	if err != nil {
 		t.Fatalf("opening wheel: %v", err)
 	}
 	defer r.Close()
 
-	names := make(map[string]bool)
+	names := make([]string, 0, len(r.File))
 	for _, f := range r.File {
-		names[f.Name] = true
+		names = append(names, f.Name)
 	}
 
-	for _, want := range []string{
+	want := []string{
 		"pkg/__init__.py",
 		"pkg/bin/tool",
 		"pkg-1.0.dist-info/METADATA",
 		"pkg-1.0.dist-info/WHEEL",
 		"pkg-1.0.dist-info/RECORD",
-	} {
-		if !names[want] {
-			t.Errorf("wheel missing entry %q", want)
-		}
+	}
+	if !slices.Equal(names, want) {
+		t.Errorf("wheel entries = %q, want %q", names, want)
 	}
 
 	recordFile, err := r.Open("pkg-1.0.dist-info/RECORD")

@@ -9,12 +9,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash/crc32"
-	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 )
 
@@ -64,6 +62,22 @@ def main():
 `
 
 const shimMain = "from . import main; main()\n"
+
+const wheelTmpl = `Wheel-Version: 1.0
+Root-Is-Purelib: false
+Tag: py3-none-%s
+`
+
+const entryPointsTmpl = `[console_scripts]
+%s = %s:main
+`
+
+// entry is one file in the wheel zip.
+type entry struct {
+	path string
+	data []byte
+	exec bool
+}
 
 var nameSepRe = regexp.MustCompile(`[-._]+`)
 
@@ -128,6 +142,10 @@ func compile(cfg *Config, t target) ([]byte, error) {
 }
 
 func buildAllWheels(cfg *Config) ([]string, error) {
+	if err := os.MkdirAll(cfg.outputDir, 0o750); err != nil {
+		return nil, fmt.Errorf("create output dir: %w", err)
+	}
+
 	normName := normalizeName(cfg.rawName)
 	distInfo := fmt.Sprintf("%s-%s.dist-info", normName, cfg.version)
 	metadata := buildMetadata(cfg)
@@ -143,19 +161,19 @@ func buildAllWheels(cfg *Config) ([]string, error) {
 		binName := cfg.rawName + t.ext()
 
 		for _, tag := range t.tags {
-			files := map[string][]byte{
-				normName + "/__init__.py":    fmt.Appendf(nil, shimInit, binName),
-				normName + "/__main__.py":    []byte(shimMain),
-				normName + "/bin/" + binName: binData,
-				distInfo + "/METADATA":       []byte(metadata),
-				distInfo + "/WHEEL": fmt.Appendf(nil,
-					"Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: py3-none-%s\n", tag),
-				distInfo + "/entry_points.txt": fmt.Appendf(nil,
-					"[console_scripts]\n%s = %s:main\n", cfg.rawName, normName),
+			entries := []entry{
+				{path: normName + "/__init__.py", data: fmt.Appendf(nil, shimInit, binName)},
+				{path: normName + "/__main__.py", data: []byte(shimMain)},
+				{path: normName + "/bin/" + binName, data: binData, exec: true},
+				{path: distInfo + "/METADATA", data: []byte(metadata)},
+				{path: distInfo + "/WHEEL", data: fmt.Appendf(nil, wheelTmpl, tag)},
+				{path: distInfo + "/entry_points.txt", data: fmt.Appendf(nil, entryPointsTmpl, cfg.rawName, normName)},
 			}
 
-			whlName, err := buildWheel(files, normName, cfg.version, tag, cfg.outputDir)
-			if err != nil {
+			whlName := fmt.Sprintf("%s-%s-py3-none-%s.whl", normName, cfg.version, tag)
+			outPath := filepath.Join(cfg.outputDir, whlName)
+
+			if err := buildWheel(entries, distInfo+"/RECORD", outPath); err != nil {
 				return nil, err
 			}
 
@@ -167,70 +185,66 @@ func buildAllWheels(cfg *Config) ([]string, error) {
 	return built, nil
 }
 
-func buildWheel(files map[string][]byte, name, version, tag, outputDir string) (string, error) {
-	distInfo := fmt.Sprintf("%s-%s.dist-info", name, version)
-	recordPath := distInfo + "/RECORD"
-
-	paths := append(slices.Collect(maps.Keys(files)), recordPath)
-	slices.Sort(paths)
-
+func buildWheel(entries []entry, recordPath, outPath string) error {
 	// RECORD lists each file's hash and size; its own entry has an empty hash.
 	var record strings.Builder
-	for _, path := range paths {
-		if path == recordPath {
-			continue
-		}
-		fmt.Fprintf(&record, "%s,%s,%d\n", path, sha256Base64(files[path]), len(files[path]))
+	for _, e := range entries {
+		fmt.Fprintf(&record, "%s,%s,%d\n", e.path, sha256Base64(e.data), len(e.data))
 	}
 	fmt.Fprintf(&record, "%s,,\n", recordPath)
-	recordData := []byte(record.String())
 
-	whlName := fmt.Sprintf("%s-%s-py3-none-%s.whl", name, version, tag)
-
-	f, err := os.Create(filepath.Join(outputDir, whlName)) //nolint:gosec // G304: output path is user-provided by design
+	f, err := os.Create(outPath) //nolint:gosec // G304: output path is user-provided by design
 	if err != nil {
-		return "", fmt.Errorf("create wheel file: %w", err)
+		return fmt.Errorf("create wheel file: %w", err)
 	}
 	defer f.Close()
 
-	// CreateRaw avoids ZIP data descriptors that PyPI rejects.
 	w := zip.NewWriter(f)
-	for _, path := range paths {
-		data := files[path]
-		if path == recordPath {
-			data = recordData
+	for _, e := range entries {
+		if err := writeEntry(w, e); err != nil {
+			return err
 		}
-		compressed := deflate(data)
-		header := &zip.FileHeader{
-			Name:               path,
-			Method:             zip.Deflate,
-			CRC32:              crc32.ChecksumIEEE(data),
-			CompressedSize64:   uint64(len(compressed)),
-			UncompressedSize64: uint64(len(data)),
-		}
-		if strings.Contains(path, "/bin/") {
-			header.SetMode(0o755)
-		}
+	}
 
-		wr, err := w.CreateRaw(header)
-		if err != nil {
-			return "", fmt.Errorf("write wheel entry %s: %w", path, err)
-		}
-
-		if _, err := wr.Write(compressed); err != nil {
-			return "", fmt.Errorf("write wheel entry %s: %w", path, err)
-		}
+	if err := writeEntry(w, entry{path: recordPath, data: []byte(record.String())}); err != nil {
+		return err
 	}
 
 	if err := w.Close(); err != nil {
-		return "", fmt.Errorf("finalize wheel: %w", err)
+		return fmt.Errorf("finalize wheel: %w", err)
 	}
 
 	if err := f.Close(); err != nil {
-		return "", fmt.Errorf("close wheel file: %w", err)
+		return fmt.Errorf("close wheel file: %w", err)
 	}
 
-	return whlName, nil
+	return nil
+}
+
+func writeEntry(w *zip.Writer, e entry) error {
+	compressed := deflate(e.data)
+	header := &zip.FileHeader{
+		Name:               e.path,
+		Method:             zip.Deflate,
+		CRC32:              crc32.ChecksumIEEE(e.data),
+		CompressedSize64:   uint64(len(compressed)),
+		UncompressedSize64: uint64(len(e.data)),
+	}
+	if e.exec {
+		header.SetMode(0o755)
+	}
+
+	// CreateRaw avoids ZIP data descriptors that PyPI rejects.
+	wr, err := w.CreateRaw(header)
+	if err != nil {
+		return fmt.Errorf("write wheel entry %s: %w", e.path, err)
+	}
+
+	if _, err := wr.Write(compressed); err != nil {
+		return fmt.Errorf("write wheel entry %s: %w", e.path, err)
+	}
+
+	return nil
 }
 
 func deflate(data []byte) []byte {
