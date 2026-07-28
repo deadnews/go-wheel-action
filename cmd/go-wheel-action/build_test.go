@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestPlatformExt(t *testing.T) {
+func TestTargetExt(t *testing.T) {
 	tests := []struct {
 		goos string
 		want string
@@ -20,9 +20,9 @@ func TestPlatformExt(t *testing.T) {
 		{"windows", ".exe"},
 	}
 	for _, tt := range tests {
-		p := platform{goos: tt.goos}
-		if got := p.ext(); got != tt.want {
-			t.Errorf("platform{goos: %q}.ext() = %q, want %q", tt.goos, got, tt.want)
+		tgt := target{goos: tt.goos}
+		if got := tgt.ext(); got != tt.want {
+			t.Errorf("target{goos: %q}.ext() = %q, want %q", tt.goos, got, tt.want)
 		}
 	}
 }
@@ -120,12 +120,11 @@ func setupTinyModule(t *testing.T) string {
 
 func TestCompile(t *testing.T) {
 	modDir := setupTinyModule(t)
-	binPath := filepath.Join(t.TempDir(), "out")
-	p := platform{goos: runtime.GOOS, goarch: runtime.GOARCH}
+	tgt := target{goos: runtime.GOOS, goarch: runtime.GOARCH}
 
 	t.Run("success", func(t *testing.T) {
 		cfg := &Config{modDir: modDir, pkg: ".", ldflags: "-s", rawName: "tiny"}
-		data, err := compile(cfg, p, binPath)
+		data, err := compile(cfg, tgt)
 		if err != nil {
 			t.Fatalf("compile: %v", err)
 		}
@@ -136,7 +135,7 @@ func TestCompile(t *testing.T) {
 
 	t.Run("bad package", func(t *testing.T) {
 		cfg := &Config{modDir: modDir, pkg: "./nonexistent", ldflags: "-s", rawName: "tiny"}
-		if _, err := compile(cfg, p, binPath); err == nil {
+		if _, err := compile(cfg, tgt); err == nil {
 			t.Fatal("expected error for bad package")
 		}
 	})
@@ -159,8 +158,13 @@ func TestBuildAllWheels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildAllWheels: %v", err)
 	}
-	if len(built) == 0 {
-		t.Fatal("expected at least one wheel")
+
+	want := 0
+	for _, tgt := range targets {
+		want += len(tgt.tags)
+	}
+	if len(built) != want {
+		t.Fatalf("built %d wheels, want %d", len(built), want)
 	}
 
 	for _, name := range built {

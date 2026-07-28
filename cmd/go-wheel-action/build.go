@@ -18,26 +18,26 @@ import (
 	"strings"
 )
 
-type platform struct {
-	goos, goarch, tag string
+// target is one cross-compilation, shared by every wheel tag listed under it.
+type target struct {
+	goos, goarch string
+	tags         []string
 }
 
-func (p platform) ext() string {
-	if p.goos == "windows" {
+func (t target) ext() string {
+	if t.goos == "windows" {
 		return ".exe"
 	}
 	return ""
 }
 
-var platforms = []platform{
-	{"linux", "amd64", "manylinux_2_17_x86_64"},
-	{"linux", "amd64", "musllinux_1_2_x86_64"},
-	{"linux", "arm64", "manylinux_2_17_aarch64"},
-	{"linux", "arm64", "musllinux_1_2_aarch64"},
-	{"darwin", "amd64", "macosx_10_9_x86_64"},
-	{"darwin", "arm64", "macosx_11_0_arm64"},
-	{"windows", "amd64", "win_amd64"},
-	{"windows", "arm64", "win_arm64"},
+var targets = []target{
+	{"linux", "amd64", []string{"manylinux_2_17_x86_64", "musllinux_1_2_x86_64"}},
+	{"linux", "arm64", []string{"manylinux_2_17_aarch64", "musllinux_1_2_aarch64"}},
+	{"darwin", "amd64", []string{"macosx_10_9_x86_64"}},
+	{"darwin", "arm64", []string{"macosx_11_0_arm64"}},
+	{"windows", "amd64", []string{"win_amd64"}},
+	{"windows", "arm64", []string{"win_arm64"}},
 }
 
 const shimInit = `import os
@@ -98,17 +98,25 @@ func buildMetadata(cfg *Config) string {
 }
 
 // compile cross-compiles cfg.pkg and returns the binary bytes.
-func compile(cfg *Config, p platform, binPath string) ([]byte, error) {
-	fmt.Printf("Building %s/%s...\n", p.goos, p.goarch)
+func compile(cfg *Config, t target) ([]byte, error) {
+	fmt.Printf("Building %s/%s...\n", t.goos, t.goarch)
+
+	tmpDir, err := os.MkdirTemp("", "go-wheel-*")
+	if err != nil {
+		return nil, fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	binPath := filepath.Join(tmpDir, cfg.rawName+t.ext())
 
 	cmd := exec.CommandContext(context.Background(), "go", "build", "-ldflags="+cfg.ldflags, "-o", binPath, cfg.pkg) //nolint:gosec // intentionally runs go build with user-provided flags
 	cmd.Dir = cfg.modDir
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS="+p.goos, "GOARCH="+p.goarch)
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS="+t.goos, "GOARCH="+t.goarch)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("go build %s/%s: %w", p.goos, p.goarch, err)
+		return nil, fmt.Errorf("go build %s/%s: %w", t.goos, t.goarch, err)
 	}
 
 	data, err := os.ReadFile(binPath) //nolint:gosec // G304: binPath is created in a private temp dir
@@ -120,53 +128,40 @@ func compile(cfg *Config, p platform, binPath string) ([]byte, error) {
 }
 
 func buildAllWheels(cfg *Config) ([]string, error) {
-	tmpDir, err := os.MkdirTemp("", "go-wheel-*")
-	if err != nil {
-		return nil, fmt.Errorf("create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	normName := normalizeName(cfg.rawName)
 	distInfo := fmt.Sprintf("%s-%s.dist-info", normName, cfg.version)
 	metadata := buildMetadata(cfg)
 
-	type buildKey struct{ goos, goarch string }
-	cache := make(map[buildKey][]byte)
-	built := make([]string, 0, len(platforms))
+	var built []string
 
-	for _, p := range platforms {
-		key := buildKey{p.goos, p.goarch}
-
-		binData, ok := cache[key]
-		if !ok {
-			binPath := filepath.Join(tmpDir, fmt.Sprintf("%s_%s_%s%s", cfg.rawName, p.goos, p.goarch, p.ext()))
-			binData, err = compile(cfg, p, binPath)
-			if err != nil {
-				return nil, err
-			}
-			cache[key] = binData
-		}
-
-		binName := cfg.rawName + p.ext()
-
-		files := map[string][]byte{
-			normName + "/__init__.py":    fmt.Appendf(nil, shimInit, binName),
-			normName + "/__main__.py":    []byte(shimMain),
-			normName + "/bin/" + binName: binData,
-			distInfo + "/METADATA":       []byte(metadata),
-			distInfo + "/WHEEL": fmt.Appendf(nil,
-				"Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: py3-none-%s\n", p.tag),
-			distInfo + "/entry_points.txt": fmt.Appendf(nil,
-				"[console_scripts]\n%s = %s:main\n", cfg.rawName, normName),
-		}
-
-		whlName, err := buildWheel(files, normName, cfg.version, p.tag, cfg.outputDir)
+	for _, t := range targets {
+		binData, err := compile(cfg, t)
 		if err != nil {
 			return nil, err
 		}
 
-		built = append(built, whlName)
-		fmt.Printf("  %s\n", whlName)
+		binName := cfg.rawName + t.ext()
+
+		for _, tag := range t.tags {
+			files := map[string][]byte{
+				normName + "/__init__.py":    fmt.Appendf(nil, shimInit, binName),
+				normName + "/__main__.py":    []byte(shimMain),
+				normName + "/bin/" + binName: binData,
+				distInfo + "/METADATA":       []byte(metadata),
+				distInfo + "/WHEEL": fmt.Appendf(nil,
+					"Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: py3-none-%s\n", tag),
+				distInfo + "/entry_points.txt": fmt.Appendf(nil,
+					"[console_scripts]\n%s = %s:main\n", cfg.rawName, normName),
+			}
+
+			whlName, err := buildWheel(files, normName, cfg.version, tag, cfg.outputDir)
+			if err != nil {
+				return nil, err
+			}
+
+			built = append(built, whlName)
+			fmt.Printf("  %s\n", whlName)
+		}
 	}
 
 	return built, nil
