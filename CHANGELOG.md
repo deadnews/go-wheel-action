@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.3](https://github.com/deadnews/go-wheel-action/compare/v1.0.2...v1.0.3) - 2026-07-31
+
+### Bug fixes
+
+- _(config)_ drop `NOASSERTION` license from github fallback - ([a822a93](https://github.com/deadnews/go-wheel-action/commit/a822a93f7ba392de3856da3bb969575dbcf8b571))
+
+### Refactor
+
+- _(build)_ assemble wheel contents as ordered entries - ([2fdea91](https://github.com/deadnews/go-wheel-action/commit/2fdea91716c63919d69991ac73c253fc64672a54))
+- _(build)_ group wheel tags under one compile target - ([4a2e11e](https://github.com/deadnews/go-wheel-action/commit/4a2e11e9411758fd8597711a8b6a3ecc62d55e16))
+- normalize log messages and error strings - ([dff12e2](https://github.com/deadnews/go-wheel-action/commit/dff12e2bfa9031a4072ee7ce007ea649bce93f9a))
+
+### Chores
+
+- _(make)_ add `alpha` target for pre-release tags - ([7c0796f](https://github.com/deadnews/go-wheel-action/commit/7c0796fea78edaadb0c316578e7ba2d017c6409d))
+- _(prek)_ migrate to toml - ([143bd87](https://github.com/deadnews/go-wheel-action/commit/143bd87dd965c73ca0ff698d17e4f02de668a485))
+
 ## [1.0.2](https://github.com/deadnews/go-wheel-action/compare/v1.0.1...v1.0.2) - 2026-06-16
 
 ### Bug fixes
