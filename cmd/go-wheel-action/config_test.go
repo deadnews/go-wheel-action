@@ -72,38 +72,41 @@ func TestLoadConfig(t *testing.T) {
 	})
 
 	t.Run("defaults", func(t *testing.T) {
+		for _, k := range []string{
+			"MOD_DIR", "PACKAGE", "LDFLAGS", "NAME", "OUTPUT_DIR",
+			"README", "DESCRIPTION", "URL", "LICENSE",
+		} {
+			t.Setenv("GOWHEEL_"+k, "")
+		}
 		t.Setenv("GOWHEEL_VERSION", "1.0.0")
-		t.Setenv("GOWHEEL_MOD_DIR", "")
-		t.Setenv("GOWHEEL_PACKAGE", "")
-		t.Setenv("GOWHEEL_LDFLAGS", "")
-		t.Setenv("GOWHEEL_NAME", "")
-		t.Setenv("GOWHEEL_OUTPUT_DIR", "")
-		t.Setenv("GOWHEEL_README", "")
+
+		modDir, err := filepath.Abs(".")
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		cfg, err := LoadConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.pkg != "." {
-			t.Errorf("pkg = %q, want %q", cfg.pkg, ".")
+		want := Config{
+			modDir:     modDir,
+			outputDir:  "./dist",
+			pkg:        ".",
+			ldflags:    "-s",
+			rawName:    filepath.Base(modDir),
+			version:    "1.0.0",
+			readmePath: "README.md",
 		}
-		if cfg.ldflags != "-s" {
-			t.Errorf("ldflags = %q, want %q", cfg.ldflags, "-s")
-		}
-		if cfg.outputDir != "./dist" {
-			t.Errorf("outputDir = %q, want %q", cfg.outputDir, "./dist")
-		}
-		if cfg.readmePath != "README.md" {
-			t.Errorf("readmePath = %q, want %q", cfg.readmePath, "README.md")
-		}
-		if !filepath.IsAbs(cfg.modDir) {
-			t.Errorf("modDir = %q, want absolute path", cfg.modDir)
+		if *cfg != want {
+			t.Errorf("config = %+v, want %+v", *cfg, want)
 		}
 	})
 
 	t.Run("custom values", func(t *testing.T) {
+		modDir := t.TempDir()
 		t.Setenv("GOWHEEL_VERSION", "v2.0.0")
-		t.Setenv("GOWHEEL_MOD_DIR", t.TempDir())
+		t.Setenv("GOWHEEL_MOD_DIR", modDir)
 		t.Setenv("GOWHEEL_PACKAGE", "./cmd/app")
 		t.Setenv("GOWHEEL_LDFLAGS", "-s -w")
 		t.Setenv("GOWHEEL_NAME", "myapp")
@@ -117,29 +120,20 @@ func TestLoadConfig(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.version != "2.0.0" {
-			t.Errorf("version = %q, want %q", cfg.version, "2.0.0")
+		want := Config{
+			modDir:      modDir,
+			outputDir:   "/tmp/wheels",
+			pkg:         "./cmd/app",
+			ldflags:     "-s -w",
+			rawName:     "myapp",
+			version:     "2.0.0",
+			description: "My tool",
+			url:         "https://example.com",
+			license:     "MIT",
+			readmePath:  "docs/README.md",
 		}
-		if cfg.pkg != "./cmd/app" {
-			t.Errorf("pkg = %q, want %q", cfg.pkg, "./cmd/app")
-		}
-		if cfg.ldflags != "-s -w" {
-			t.Errorf("ldflags = %q, want %q", cfg.ldflags, "-s -w")
-		}
-		if cfg.rawName != "myapp" {
-			t.Errorf("rawName = %q, want %q", cfg.rawName, "myapp")
-		}
-		if cfg.outputDir != "/tmp/wheels" {
-			t.Errorf("outputDir = %q, want %q", cfg.outputDir, "/tmp/wheels")
-		}
-		if cfg.description != "My tool" {
-			t.Errorf("description = %q, want %q", cfg.description, "My tool")
-		}
-		if cfg.url != "https://example.com" {
-			t.Errorf("url = %q, want %q", cfg.url, "https://example.com")
-		}
-		if cfg.license != "MIT" {
-			t.Errorf("license = %q, want %q", cfg.license, "MIT")
+		if *cfg != want {
+			t.Errorf("config = %+v, want %+v", *cfg, want)
 		}
 	})
 
