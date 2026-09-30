@@ -58,7 +58,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Build wheels
-        uses: ./
+        uses: $/
         with:
           package: ./cmd/go-wheel-action
 
