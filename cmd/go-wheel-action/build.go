@@ -123,7 +123,9 @@ func compile(cfg *Config, t target) ([]byte, error) {
 
 	binPath := filepath.Join(tmpDir, cfg.rawName+t.ext())
 
-	cmd := exec.CommandContext(context.Background(), "go", "build", "-ldflags="+cfg.ldflags, "-o", binPath, cfg.pkg) //nolint:gosec // intentionally runs go build with user-provided flags
+	//nolint:gosec // intentionally runs go build with user-provided flags
+	cmd := exec.CommandContext(
+		context.Background(), "go", "build", "-ldflags="+cfg.ldflags, "-o", binPath, cfg.pkg)
 	cmd.Dir = cfg.modDir
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS="+t.goos, "GOARCH="+t.goarch)
 	cmd.Stdout = os.Stdout
@@ -133,7 +135,7 @@ func compile(cfg *Config, t target) ([]byte, error) {
 		return nil, fmt.Errorf("go build %s/%s: %w", t.goos, t.goarch, err)
 	}
 
-	data, err := os.ReadFile(binPath) //nolint:gosec // G304: binPath is created in a private temp dir
+	data, err := os.ReadFile(binPath) //nolint:gosec // G304: binPath is in a private temp dir
 	if err != nil {
 		return nil, fmt.Errorf("read binary: %w", err)
 	}
@@ -167,7 +169,10 @@ func buildAllWheels(cfg *Config) ([]string, error) {
 				{path: normName + "/bin/" + binName, data: binData, exec: true},
 				{path: distInfo + "/METADATA", data: []byte(metadata)},
 				{path: distInfo + "/WHEEL", data: fmt.Appendf(nil, wheelTmpl, tag)},
-				{path: distInfo + "/entry_points.txt", data: fmt.Appendf(nil, entryPointsTmpl, cfg.rawName, normName)},
+				{
+					path: distInfo + "/entry_points.txt",
+					data: fmt.Appendf(nil, entryPointsTmpl, cfg.rawName, normName),
+				},
 			}
 
 			whlName := fmt.Sprintf("%s-%s-py3-none-%s.whl", normName, cfg.version, tag)
@@ -206,7 +211,8 @@ func buildWheel(entries []entry, recordPath, outPath string) error {
 		}
 	}
 
-	if err := writeEntry(w, entry{path: recordPath, data: []byte(record.String())}); err != nil {
+	rec := entry{path: recordPath, data: []byte(record.String())}
+	if err := writeEntry(w, rec); err != nil {
 		return err
 	}
 
