@@ -169,11 +169,38 @@ func TestBuildAllWheels(t *testing.T) {
 	}
 
 	for _, name := range built {
-		path := filepath.Join(outputDir, name)
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("wheel file missing: %s", path)
+		bin := "tiny"
+		if strings.Contains(name, "-win_") {
+			bin += ".exe"
+		}
+		wantNames := []string{
+			"tiny-0.1.0.data/scripts/" + bin,
+			"tiny-0.1.0.dist-info/METADATA",
+			"tiny-0.1.0.dist-info/WHEEL",
+			"tiny-0.1.0.dist-info/RECORD",
+		}
+		got := zipNames(t, filepath.Join(outputDir, name))
+		if !slices.Equal(got, wantNames) {
+			t.Errorf("%s entries = %q, want %q", name, got, wantNames)
 		}
 	}
+}
+
+func zipNames(t *testing.T, path string) []string {
+	t.Helper()
+
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatalf("opening wheel: %v", err)
+	}
+	defer r.Close()
+
+	names := make([]string, 0, len(r.File))
+	for _, f := range r.File {
+		names = append(names, f.Name)
+	}
+
+	return names
 }
 
 func TestBuildAllWheelsBadPackage(t *testing.T) {
@@ -196,7 +223,7 @@ func TestBuildAllWheelsBadPackage(t *testing.T) {
 }
 
 func TestBuildWheelBadOutputPath(t *testing.T) {
-	entries := []entry{{path: "pkg/__init__.py", data: []byte("init")}}
+	entries := []entry{{path: "pkg-1.0.dist-info/METADATA", data: []byte("meta")}}
 	err := buildWheel(entries, "pkg-1.0.dist-info/RECORD", "/nonexistent/dir/pkg.whl")
 	if err == nil {
 		t.Fatal("expected error for nonexistent output dir")
@@ -207,8 +234,7 @@ func TestBuildWheel(t *testing.T) {
 	outPath := filepath.Join(t.TempDir(), "pkg-1.0-py3-none-manylinux_2_17_x86_64.whl")
 
 	entries := []entry{
-		{path: "pkg/__init__.py", data: []byte("init")},
-		{path: "pkg/bin/tool", data: []byte("binary"), exec: true},
+		{path: "pkg-1.0.data/scripts/tool", data: []byte("binary"), exec: true},
 		{path: "pkg-1.0.dist-info/METADATA", data: []byte("meta")},
 		{path: "pkg-1.0.dist-info/WHEEL", data: []byte("wheel")},
 	}
@@ -229,8 +255,7 @@ func TestBuildWheel(t *testing.T) {
 	}
 
 	want := []string{
-		"pkg/__init__.py",
-		"pkg/bin/tool",
+		"pkg-1.0.data/scripts/tool",
 		"pkg-1.0.dist-info/METADATA",
 		"pkg-1.0.dist-info/WHEEL",
 		"pkg-1.0.dist-info/RECORD",
@@ -259,7 +284,7 @@ func TestBuildWheel(t *testing.T) {
 	}
 
 	for _, f := range r.File {
-		if f.Name == "pkg/bin/tool" {
+		if f.Name == "pkg-1.0.data/scripts/tool" {
 			mode := f.Mode()
 			if mode&0o111 == 0 {
 				t.Errorf("binary entry mode %o should be executable", mode)

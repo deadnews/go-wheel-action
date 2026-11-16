@@ -38,38 +38,9 @@ var targets = []target{
 	{"windows", "arm64", []string{"win_arm64"}},
 }
 
-const shimInit = `import os
-import stat
-import subprocess
-import sys
-from pathlib import Path
-
-
-def main():
-    binary = Path(__file__).parent / "bin" / "%s"
-
-    if sys.platform != "win32":
-        m = binary.stat().st_mode
-        if not (m & stat.S_IXUSR):
-            binary.chmod(m | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-
-    b = str(binary)
-
-    if sys.platform == "win32":
-        sys.exit(subprocess.call([b, *sys.argv[1:]]))
-    else:
-        os.execvp(b, [b, *sys.argv[1:]])
-`
-
-const shimMain = "from . import main; main()\n"
-
 const wheelTmpl = `Wheel-Version: 1.0
 Root-Is-Purelib: false
 Tag: py3-none-%s
-`
-
-const entryPointsTmpl = `[console_scripts]
-%s = %s:main
 `
 
 // entry is one file in the wheel zip.
@@ -148,8 +119,8 @@ func buildAllWheels(cfg *Config) ([]string, error) {
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
 
-	normName := normalizeName(cfg.rawName)
-	distInfo := fmt.Sprintf("%s-%s.dist-info", normName, cfg.version)
+	base := normalizeName(cfg.rawName) + "-" + cfg.version
+	distInfo := base + ".dist-info"
 	metadata := buildMetadata(cfg)
 
 	var built []string
@@ -160,22 +131,17 @@ func buildAllWheels(cfg *Config) ([]string, error) {
 			return nil, err
 		}
 
-		binName := cfg.rawName + t.ext()
+		// Installers copy .data/scripts files into the environment's bin directory.
+		binPath := base + ".data/scripts/" + cfg.rawName + t.ext()
 
 		for _, tag := range t.tags {
 			entries := []entry{
-				{path: normName + "/__init__.py", data: fmt.Appendf(nil, shimInit, binName)},
-				{path: normName + "/__main__.py", data: []byte(shimMain)},
-				{path: normName + "/bin/" + binName, data: binData, exec: true},
+				{path: binPath, data: binData, exec: true},
 				{path: distInfo + "/METADATA", data: []byte(metadata)},
 				{path: distInfo + "/WHEEL", data: fmt.Appendf(nil, wheelTmpl, tag)},
-				{
-					path: distInfo + "/entry_points.txt",
-					data: fmt.Appendf(nil, entryPointsTmpl, cfg.rawName, normName),
-				},
 			}
 
-			whlName := fmt.Sprintf("%s-%s-py3-none-%s.whl", normName, cfg.version, tag)
+			whlName := fmt.Sprintf("%s-py3-none-%s.whl", base, tag)
 			outPath := filepath.Join(cfg.outputDir, whlName)
 
 			if err := buildWheel(entries, distInfo+"/RECORD", outPath); err != nil {
