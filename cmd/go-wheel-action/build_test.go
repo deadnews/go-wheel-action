@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -280,52 +281,51 @@ func TestBuildWheel(t *testing.T) {
 		t.Fatalf("buildWheel: %v", err)
 	}
 
+	record := "pkg-1.0.data/scripts/tool,sha256=mjpF0BUxog6JrGrhCwsL6wSSrNchajaKoGLRpf7K-c0,6\n" +
+		"pkg-1.0.dist-info/METADATA,sha256=6jvXPitQbgBScjKz7XQ8Bm2oOo4wZvYqcedeubSqHbY,4\n" +
+		"pkg-1.0.dist-info/WHEEL,sha256=ulmSYVnSqiVuuHObjafitXS5YOEgLG1iTL6YHO-ZbJE,5\n" +
+		"pkg-1.0.dist-info/RECORD,,\n"
+	want := slices.Concat(entries, []entry{
+		{path: "pkg-1.0.dist-info/RECORD", data: []byte(record)},
+	})
+
 	r, err := zip.OpenReader(outPath)
 	if err != nil {
 		t.Fatalf("opening wheel: %v", err)
 	}
 	defer r.Close()
 
-	names := make([]string, 0, len(r.File))
-	for _, f := range r.File {
-		names = append(names, f.Name)
+	if len(r.File) != len(want) {
+		t.Fatalf("wheel has %d entries, want %d", len(r.File), len(want))
 	}
 
-	want := []string{
-		"pkg-1.0.data/scripts/tool",
-		"pkg-1.0.dist-info/METADATA",
-		"pkg-1.0.dist-info/WHEEL",
-		"pkg-1.0.dist-info/RECORD",
-	}
-	if !slices.Equal(names, want) {
-		t.Errorf("wheel entries = %q, want %q", names, want)
-	}
-
-	recordFile, err := r.Open("pkg-1.0.dist-info/RECORD")
-	if err != nil {
-		t.Fatalf("opening RECORD: %v", err)
-	}
-	defer recordFile.Close()
-
-	recordData, err := io.ReadAll(recordFile)
-	if err != nil {
-		t.Fatalf("reading RECORD: %v", err)
-	}
-	record := string(recordData)
-
-	if !strings.Contains(record, "pkg-1.0.dist-info/RECORD,,") {
-		t.Error("RECORD should have empty hash for itself")
-	}
-	if !strings.Contains(record, "sha256=") {
-		t.Error("RECORD should contain sha256 hashes")
-	}
-
-	for _, f := range r.File {
-		if f.Name == "pkg-1.0.data/scripts/tool" {
-			mode := f.Mode()
-			if mode&0o111 == 0 {
-				t.Errorf("binary entry mode %o should be executable", mode)
-			}
+	for i, f := range r.File {
+		data := readZipFile(t, f)
+		w := want[i]
+		exec := f.Mode()&0o111 != 0
+		if f.Name != w.path || !bytes.Equal(data, w.data) || exec != w.exec {
+			t.Errorf("entry %d = {%s %q %t}, want {%s %q %t}",
+				i, f.Name, data, exec, w.path, w.data, w.exec)
+		}
+		if f.Flags&0x8 != 0 {
+			t.Errorf("%s has a data descriptor", f.Name)
 		}
 	}
+}
+
+func readZipFile(t *testing.T, f *zip.File) []byte {
+	t.Helper()
+
+	rc, err := f.Open()
+	if err != nil {
+		t.Fatalf("opening %s: %v", f.Name, err)
+	}
+	defer rc.Close()
+
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		t.Fatalf("reading %s: %v", f.Name, err)
+	}
+
+	return data
 }
