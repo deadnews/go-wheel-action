@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.1.0](https://github.com/deadnews/go-wheel-action/compare/v1.0.3...v1.1.0) - 2026-11-16
+
+### Features
+
+- _(build)_ build one wheel per target with a compressed tag set - ([2b354ef](https://github.com/deadnews/go-wheel-action/commit/2b354ef5471a4f6b53956e01524ab022633a7583))
+- _(build)_ ship the binary in `.data/scripts`, drop the python shim - ([18dc551](https://github.com/deadnews/go-wheel-action/commit/18dc551993be22de5817f3dd3fa30a83d2e6443d))
+
+### Bug fixes
+
+- _(build)_ warn when the readme is missing - ([e62f8c2](https://github.com/deadnews/go-wheel-action/commit/e62f8c24b23ef1dd0c2ca984699b5012fb3d1ce5))
+
+### Testing
+
+- _(build)_ compare every wheel entry, assert no data descriptors - ([9bc43e6](https://github.com/deadnews/go-wheel-action/commit/9bc43e63aa03ae646863be9c7e9936a7c4abf56d))
+- _(config)_ compare whole `Config` structs - ([ce48bac](https://github.com/deadnews/go-wheel-action/commit/ce48bac9c42152c1b611156a88674db1388fd652))
+
+### Styling
+
+- break long lines - ([5b9e554](https://github.com/deadnews/go-wheel-action/commit/5b9e554a9d8a31894098f98131b7e8dcdfa12447))
+
+### Chores
+
+- _(make)_ default `tag` to bumped version - ([0830187](https://github.com/deadnews/go-wheel-action/commit/0830187122b8ef60392c9dfec4526c418e4710c7))
+- _(prek)_ build `golangci-lint` with a prek-managed go - ([2f967b8](https://github.com/deadnews/go-wheel-action/commit/2f967b82c7086e5d2c4046a45cb9bcf28d3a9ef3))
+- use the `$/` self-repository syntax - ([b105336](https://github.com/deadnews/go-wheel-action/commit/b105336702e898520cfedf88f3dd966b20ad7e02))
+
 ## [1.0.3](https://github.com/deadnews/go-wheel-action/compare/v1.0.2...v1.0.3) - 2026-07-31
 
 ### Bug fixes
