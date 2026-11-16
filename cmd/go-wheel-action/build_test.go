@@ -95,6 +95,30 @@ func TestBuildMetadata(t *testing.T) {
 		}
 	})
 
+	t.Run("missing readme warns", func(t *testing.T) {
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		stderr := os.Stderr
+		os.Stderr = w
+		t.Cleanup(func() { os.Stderr = stderr })
+
+		buildMetadata(&Config{rawName: "myapp", version: "1.0.0", readmePath: "nonexistent.md"})
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		out, err := io.ReadAll(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := "warning: readme not included: open nonexistent.md: "
+		if !strings.HasPrefix(string(out), want) {
+			t.Errorf("stderr = %q, want prefix %q", out, want)
+		}
+	})
+
 	t.Run("with readme", func(t *testing.T) {
 		tmp := t.TempDir()
 		readme := filepath.Join(tmp, "README.md")

@@ -76,12 +76,11 @@ func buildMetadata(cfg *Config) string {
 	fmt.Fprint(&b, "Requires-Python: >=3.10\n")
 
 	data, err := os.ReadFile(cfg.readmePath)
-	switch {
-	case err == nil:
-		fmt.Fprintf(&b, "Description-Content-Type: text/markdown\n\n%s\n", data)
-	case !os.IsNotExist(err):
-		fmt.Fprintf(os.Stderr, "warning: reading readme %s: %v\n", cfg.readmePath, err)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: readme not included: %v\n", err)
+		return b.String()
 	}
+	fmt.Fprintf(&b, "Description-Content-Type: text/markdown\n\n%s\n", data)
 
 	return b.String()
 }
