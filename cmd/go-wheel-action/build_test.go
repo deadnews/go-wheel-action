@@ -54,6 +54,15 @@ func TestSha256Base64(t *testing.T) {
 	}
 }
 
+func TestBuildWheelMetadata(t *testing.T) {
+	got := string(buildWheelMetadata([]string{"manylinux_2_17_x86_64", "musllinux_1_2_x86_64"}))
+	want := "Wheel-Version: 1.0\nRoot-Is-Purelib: false\n" +
+		"Tag: py3-none-manylinux_2_17_x86_64\nTag: py3-none-musllinux_1_2_x86_64\n"
+	if got != want {
+		t.Errorf("buildWheelMetadata:\ngot:  %q\nwant: %q", got, want)
+	}
+}
+
 func TestBuildMetadata(t *testing.T) {
 	t.Run("minimal", func(t *testing.T) {
 		got := buildMetadata(&Config{rawName: "myapp", version: "1.0.0", readmePath: "nonexistent.md"})
@@ -160,12 +169,16 @@ func TestBuildAllWheels(t *testing.T) {
 		t.Fatalf("buildAllWheels: %v", err)
 	}
 
-	want := 0
-	for _, tgt := range targets {
-		want += len(tgt.tags)
+	want := []string{
+		"tiny-0.1.0-py3-none-manylinux_2_17_x86_64.musllinux_1_2_x86_64.whl",
+		"tiny-0.1.0-py3-none-manylinux_2_17_aarch64.musllinux_1_2_aarch64.whl",
+		"tiny-0.1.0-py3-none-macosx_10_9_x86_64.whl",
+		"tiny-0.1.0-py3-none-macosx_11_0_arm64.whl",
+		"tiny-0.1.0-py3-none-win_amd64.whl",
+		"tiny-0.1.0-py3-none-win_arm64.whl",
 	}
-	if len(built) != want {
-		t.Fatalf("built %d wheels, want %d", len(built), want)
+	if !slices.Equal(built, want) {
+		t.Fatalf("built = %q, want %q", built, want)
 	}
 
 	for _, name := range built {

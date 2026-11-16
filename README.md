@@ -59,9 +59,9 @@ uvx go-wheel-action
 
 ## Platforms
 
-Builds wheels for 8 platform targets (all statically compiled with `CGO_ENABLED=0`):
+Builds one wheel per row (all statically compiled with `CGO_ENABLED=0`):
 
-| OS      | Arch  | Wheel tag                                         |
+| OS      | Arch  | Wheel tags                                        |
 | ------- | ----- | ------------------------------------------------- |
 | Linux   | amd64 | `manylinux_2_17_x86_64`, `musllinux_1_2_x86_64`   |
 | Linux   | arm64 | `manylinux_2_17_aarch64`, `musllinux_1_2_aarch64` |

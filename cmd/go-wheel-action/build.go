@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-// target is one cross-compilation, shared by every wheel tag listed under it.
+// target is one cross-compilation and the platform tags its wheel carries.
 type target struct {
 	goos, goarch string
 	tags         []string
@@ -38,11 +38,6 @@ var targets = []target{
 	{"windows", "arm64", []string{"win_arm64"}},
 }
 
-const wheelTmpl = `Wheel-Version: 1.0
-Root-Is-Purelib: false
-Tag: py3-none-%s
-`
-
 // entry is one file in the wheel zip.
 type entry struct {
 	path string
@@ -55,6 +50,15 @@ var nameSepRe = regexp.MustCompile(`[-._]+`)
 // normalizeName applies PEP 625 normalization.
 func normalizeName(name string) string {
 	return strings.ToLower(nameSepRe.ReplaceAllString(name, "_"))
+}
+
+func buildWheelMetadata(tags []string) []byte {
+	var b bytes.Buffer
+	b.WriteString("Wheel-Version: 1.0\nRoot-Is-Purelib: false\n")
+	for _, tag := range tags {
+		fmt.Fprintf(&b, "Tag: py3-none-%s\n", tag)
+	}
+	return b.Bytes()
 }
 
 func buildMetadata(cfg *Config) string {
@@ -134,23 +138,21 @@ func buildAllWheels(cfg *Config) ([]string, error) {
 		// Installers copy .data/scripts files into the environment's bin directory.
 		binPath := base + ".data/scripts/" + cfg.rawName + t.ext()
 
-		for _, tag := range t.tags {
-			entries := []entry{
-				{path: binPath, data: binData, exec: true},
-				{path: distInfo + "/METADATA", data: []byte(metadata)},
-				{path: distInfo + "/WHEEL", data: fmt.Appendf(nil, wheelTmpl, tag)},
-			}
-
-			whlName := fmt.Sprintf("%s-py3-none-%s.whl", base, tag)
-			outPath := filepath.Join(cfg.outputDir, whlName)
-
-			if err := buildWheel(entries, distInfo+"/RECORD", outPath); err != nil {
-				return nil, err
-			}
-
-			built = append(built, whlName)
-			fmt.Printf("  %s\n", whlName)
+		entries := []entry{
+			{path: binPath, data: binData, exec: true},
+			{path: distInfo + "/METADATA", data: []byte(metadata)},
+			{path: distInfo + "/WHEEL", data: buildWheelMetadata(t.tags)},
 		}
+
+		whlName := fmt.Sprintf("%s-py3-none-%s.whl", base, strings.Join(t.tags, "."))
+		outPath := filepath.Join(cfg.outputDir, whlName)
+
+		if err := buildWheel(entries, distInfo+"/RECORD", outPath); err != nil {
+			return nil, err
+		}
+
+		built = append(built, whlName)
+		fmt.Printf("  %s\n", whlName)
 	}
 
 	return built, nil
